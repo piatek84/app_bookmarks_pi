@@ -1,0 +1,14 @@
+[Unit]
+Description=bookmarks-pi
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/app_bookmarks_pi
+EnvironmentFile=/home/pi/app_bookmarks_pi/.env
+ExecStart=/home/pi/app_bookmarks_pi/.venv/bin/uvicorn bookmarks_pi.main:app --host 0.0.0.0 --port 8000
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

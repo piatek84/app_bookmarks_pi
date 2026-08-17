@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Bookmarks - Verify{% endblock %}
+{% block content %}
+<form class="login-form" method="post" action="/verify">
+  <h1>Check Telegram</h1>
+  <p>We sent a login code to your Telegram chat.</p>
+  <input type="hidden" name="username" value="{{ username }}" />
+  <label>
+    Code
+    <input type="text" name="code" required autofocus />
+  </label>
+  <button type="submit">Verify</button>
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+</form>
+{% endblock %}

@@ -1,0 +1,143 @@
+:root {
+  color-scheme: light dark;
+  --bg: #12161c;
+  --fg: #e8ecf1;
+  --muted: #8b96a5;
+  --accent: #4f8cff;
+  --error: #ff6b6b;
+  --border: #2a3140;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, sans-serif;
+  padding: 1.5rem;
+}
+
+h1 {
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  width: min(320px, 100%);
+}
+
+.bookmarks-page {
+  width: min(560px, 100%);
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+input,
+select,
+button {
+  font: inherit;
+  padding: 0.55rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: #1a212c;
+  color: var(--fg);
+}
+
+button {
+  cursor: pointer;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+button:hover {
+  filter: brightness(1.1);
+}
+
+.bookmark-form {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.bookmark-form input {
+  flex: 1;
+  min-width: 120px;
+}
+
+.filter {
+  display: flex;
+  align-items: end;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.error {
+  color: var(--error);
+  font-size: 0.9rem;
+}
+
+.bookmark-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.bookmark-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.bookmark-list li.empty {
+  justify-content: center;
+  color: var(--muted);
+}
+
+.bookmark-list a {
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.bookmark-list a:hover {
+  text-decoration: underline;
+}
+
+.category-tag {
+  font-size: 0.75rem;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem;
+}
+
+.logout {
+  font-size: 0.8rem;
+  color: var(--muted);
+}

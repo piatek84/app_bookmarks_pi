@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Bookmarks - Login{% endblock %}
+{% block content %}
+<form class="login-form" method="post" action="/login">
+  <h1>Bookmarks</h1>
+  <label>
+    Username
+    <input type="text" name="username" required autofocus />
+  </label>
+  <button type="submit">Send login code</button>
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+</form>
+{% endblock %}

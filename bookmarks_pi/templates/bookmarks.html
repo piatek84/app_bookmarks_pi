@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ username }}'s bookmarks{% endblock %}
+{% block content %}
+<div class="bookmarks-page">
+  <h1>{{ username }}&apos;s bookmarks <a class="logout" href="/logout">Log out</a></h1>
+
+  <form class="bookmark-form" method="post" action="/bookmarks">
+    <input placeholder="Category" name="category" required />
+    <input placeholder="Name" name="name" required />
+    <input placeholder="https://..." name="url" type="url" required />
+    <button type="submit">Add bookmark</button>
+  </form>
+
+  <form class="filter" method="get" action="/bookmarks">
+    <label>
+      Filter by category
+      <select name="category">
+        <option value="" {% if not category_filter %}selected{% endif %}>All</option>
+        {% for c in categories %}
+        <option value="{{ c }}" {% if c == category_filter %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit">Filter</button>
+  </form>
+
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+  <ul class="bookmark-list">
+    {% for bookmark in bookmarks %}
+    <li>
+      <a href="{{ bookmark['url'] }}" target="_blank" rel="noreferrer">{{ bookmark['name'] }}</a>
+      <span class="category-tag">{{ bookmark['category'] }}</span>
+    </li>
+    {% else %}
+    <li class="empty">No bookmarks yet.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}
