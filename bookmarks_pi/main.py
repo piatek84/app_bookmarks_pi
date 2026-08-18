@@ -104,3 +104,12 @@ def add_bookmark(
         return RedirectResponse("/", status_code=303)
     db.create_bookmark(conn, username, category, name, url)
     return RedirectResponse("/bookmarks", status_code=303)
+
+
+@app.post("/bookmarks/{bookmark_id}/delete")
+def delete_bookmark(request: Request, bookmark_id: int, conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    db.delete_bookmark(conn, username, bookmark_id)
+    return RedirectResponse("/bookmarks", status_code=303)

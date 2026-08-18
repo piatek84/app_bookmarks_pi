@@ -119,6 +119,15 @@ def list_bookmarks(conn: sqlite3.Connection, owner_username: str, category: Opti
     ).fetchall()
 
 
+def delete_bookmark(conn: sqlite3.Connection, owner_username: str, bookmark_id: int) -> bool:
+    cursor = conn.execute(
+        "DELETE FROM bookmarks WHERE id = ? AND owner_username = ?",
+        (bookmark_id, owner_username),
+    )
+    conn.commit()
+    return cursor.rowcount > 0
+
+
 def list_categories(conn: sqlite3.Connection, owner_username: str) -> list[str]:
     rows = conn.execute(
         "SELECT DISTINCT category FROM bookmarks WHERE owner_username = ? ORDER BY category",

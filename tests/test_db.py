@@ -64,3 +64,15 @@ def test_bookmarks_crud_and_category_filter(conn):
 def test_bookmarks_are_scoped_per_owner(conn):
     db.create_bookmark(conn, "juan", "reading", "Blog", "https://blog.dev")
     assert db.list_bookmarks(conn, "other") == []
+
+
+def test_delete_bookmark(conn):
+    bookmark = db.create_bookmark(conn, "juan", "reading", "Blog", "https://blog.dev")
+    assert db.delete_bookmark(conn, "juan", bookmark["id"]) is True
+    assert db.list_bookmarks(conn, "juan") == []
+
+
+def test_delete_bookmark_scoped_per_owner(conn):
+    bookmark = db.create_bookmark(conn, "juan", "reading", "Blog", "https://blog.dev")
+    assert db.delete_bookmark(conn, "other", bookmark["id"]) is False
+    assert len(db.list_bookmarks(conn, "juan")) == 1

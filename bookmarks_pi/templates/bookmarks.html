@@ -30,7 +30,12 @@
     {% for bookmark in bookmarks %}
     <li>
       <a href="{{ bookmark['url'] }}" target="_blank" rel="noreferrer">{{ bookmark['name'] }}</a>
-      <span class="category-tag">{{ bookmark['category'] }}</span>
+      <span class="bookmark-meta">
+        <span class="category-tag">{{ bookmark['category'] }}</span>
+        <form method="post" action="/bookmarks/{{ bookmark['id'] }}/delete">
+          <button type="submit" class="delete-btn" aria-label="Delete {{ bookmark['name'] }}">&times;</button>
+        </form>
+      </span>
     </li>
     {% else %}
     <li class="empty">No bookmarks yet.</li>
