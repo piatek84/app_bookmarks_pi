@@ -69,6 +69,13 @@ CREATE TABLE IF NOT EXISTS holidays (
     created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_holidays_owner ON holidays (owner_username);
+
+CREATE TABLE IF NOT EXISTS category_order (
+    owner_username TEXT NOT NULL,
+    category TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    PRIMARY KEY (owner_username, category)
+);
 """
 
 
@@ -133,11 +140,76 @@ def verify_login_code(conn: sqlite3.Connection, username: str, code: str) -> boo
     return True
 
 
+def _ensure_category_position(conn: sqlite3.Connection, owner_username: str, category: str) -> None:
+    existing = conn.execute(
+        "SELECT 1 FROM category_order WHERE owner_username = ? AND category = ?",
+        (owner_username, category),
+    ).fetchone()
+    if existing:
+        return
+    max_position = conn.execute(
+        "SELECT COALESCE(MAX(position), -1) AS m FROM category_order WHERE owner_username = ?",
+        (owner_username,),
+    ).fetchone()["m"]
+    conn.execute(
+        "INSERT INTO category_order (owner_username, category, position) VALUES (?, ?, ?)",
+        (owner_username, category, max_position + 1),
+    )
+
+
+def _sync_category_positions(conn: sqlite3.Connection, owner_username: str) -> None:
+    """Backfills positions for categories that predate this table (legacy data,
+    imports) so they still show up, appended in alphabetical order."""
+    known = {
+        row["category"]
+        for row in conn.execute(
+            "SELECT category FROM category_order WHERE owner_username = ?", (owner_username,)
+        ).fetchall()
+    }
+    all_categories = [
+        row["category"]
+        for row in conn.execute(
+            "SELECT DISTINCT category FROM bookmarks WHERE owner_username = ? ORDER BY category",
+            (owner_username,),
+        ).fetchall()
+    ]
+    for category in all_categories:
+        if category not in known:
+            _ensure_category_position(conn, owner_username, category)
+    conn.commit()
+
+
+def move_category(conn: sqlite3.Connection, owner_username: str, category: str, direction: int) -> None:
+    """direction: -1 moves the category earlier, +1 moves it later."""
+    _sync_category_positions(conn, owner_username)
+    rows = conn.execute(
+        "SELECT category, position FROM category_order WHERE owner_username = ? ORDER BY position",
+        (owner_username,),
+    ).fetchall()
+    categories = [row["category"] for row in rows]
+    if category not in categories:
+        return
+    index = categories.index(category)
+    swap_index = index + direction
+    if swap_index < 0 or swap_index >= len(categories):
+        return
+    conn.execute(
+        "UPDATE category_order SET position = ? WHERE owner_username = ? AND category = ?",
+        (rows[swap_index]["position"], owner_username, category),
+    )
+    conn.execute(
+        "UPDATE category_order SET position = ? WHERE owner_username = ? AND category = ?",
+        (rows[index]["position"], owner_username, categories[swap_index]),
+    )
+    conn.commit()
+
+
 def create_bookmark(conn: sqlite3.Connection, owner_username: str, category: str, name: str, url: str) -> sqlite3.Row:
     cursor = conn.execute(
         "INSERT INTO bookmarks (owner_username, category, name, url, created_at) VALUES (?, ?, ?, ?, ?)",
         (owner_username, category, name, url, _now()),
     )
+    _ensure_category_position(conn, owner_username, category)
     conn.commit()
     return conn.execute("SELECT * FROM bookmarks WHERE id = ?", (cursor.lastrowid,)).fetchone()
 
@@ -179,14 +251,22 @@ def list_categories(conn: sqlite3.Connection, owner_username: str) -> list[str]:
 
 
 def list_bookmarks_grouped_by_category(conn: sqlite3.Connection, owner_username: str) -> dict[str, list[sqlite3.Row]]:
+    _sync_category_positions(conn, owner_username)
+    order = [
+        row["category"]
+        for row in conn.execute(
+            "SELECT category FROM category_order WHERE owner_username = ? ORDER BY position",
+            (owner_username,),
+        ).fetchall()
+    ]
     rows = conn.execute(
-        "SELECT * FROM bookmarks WHERE owner_username = ? ORDER BY category, created_at DESC",
+        "SELECT * FROM bookmarks WHERE owner_username = ? ORDER BY created_at DESC",
         (owner_username,),
     ).fetchall()
     grouped: dict[str, list[sqlite3.Row]] = {}
     for row in rows:
         grouped.setdefault(row["category"], []).append(row)
-    return grouped
+    return {category: grouped[category] for category in order if category in grouped}
 
 
 def create_birthday(conn: sqlite3.Connection, owner_username: str, title: str, month: int, day: int) -> sqlite3.Row:

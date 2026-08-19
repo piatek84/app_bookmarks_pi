@@ -176,8 +176,40 @@ button:hover {
   gap: 1rem;
 }
 
-.bookmark-group h2 {
-  margin: 0 0 0.5rem;
+.bookmark-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.bookmark-group-header h2 {
+  margin: 0;
+}
+
+.category-reorder {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.category-reorder button {
+  padding: 0.15rem 0.4rem;
+  font-size: 0.7rem;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.category-reorder button:hover:not(:disabled) {
+  color: var(--fg);
+  border-color: var(--fg);
+  opacity: 1;
+}
+
+.category-reorder button:disabled {
+  opacity: 0.3;
+  cursor: default;
 }
 
 .delete-btn {

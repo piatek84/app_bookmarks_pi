@@ -16,7 +16,7 @@ from starlette.testclient import TestClient
 
 from bookmarks_pi import db, main
 
-TABLES = ["users", "login_codes", "bookmarks", "birthdays", "vacations", "holidays", "work_shifts"]
+TABLES = ["users", "login_codes", "bookmarks", "birthdays", "vacations", "holidays", "work_shifts", "category_order"]
 
 
 @pytest.fixture
@@ -95,3 +95,12 @@ def test_manage_panel_stays_open_after_adding_a_holiday(client):
     r = client.post("/calendar/holidays", data={"title": "Andalucía", "day": "28", "month": "2"})
     assert r.status_code == 200
     assert 'class="calendar-settings" open' in r.text
+
+
+def test_move_category_reorders_bookmark_sections(client):
+    client.post("/bookmarks", data={"category": "apps", "name": "A", "url": "https://a.dev"})
+    client.post("/bookmarks", data={"category": "sports", "name": "B", "url": "https://b.dev"})
+
+    r = client.post("/bookmarks/categories/move", data={"category": "sports", "direction": "up"})
+    assert r.status_code == 200
+    assert r.text.index(">sports<") < r.text.index(">apps<")

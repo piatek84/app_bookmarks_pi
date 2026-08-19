@@ -95,6 +95,54 @@ def test_list_bookmarks_grouped_by_category_scoped_per_owner(conn):
     assert db.list_bookmarks_grouped_by_category(conn, "other") == {}
 
 
+def test_categories_are_ordered_by_first_use(conn):
+    db.create_bookmark(conn, "juan", "tools", "Vite", "https://vite.dev")
+    db.create_bookmark(conn, "juan", "reading", "Blog", "https://blog.dev")
+    db.create_bookmark(conn, "juan", "reading", "Feed", "https://feed.dev")
+
+    grouped = db.list_bookmarks_grouped_by_category(conn, "juan")
+    assert list(grouped.keys()) == ["tools", "reading"]
+
+
+def test_move_category_swaps_positions():
+    conn = db.open_connection(":memory:")
+    conn.executescript(db.SCHEMA)
+    db.create_bookmark(conn, "juan", "apps", "A", "https://a.dev")
+    db.create_bookmark(conn, "juan", "sports", "B", "https://b.dev")
+    db.create_bookmark(conn, "juan", "youtube", "C", "https://c.dev")
+
+    db.move_category(conn, "juan", "youtube", -1)
+    assert list(db.list_bookmarks_grouped_by_category(conn, "juan").keys()) == ["apps", "youtube", "sports"]
+
+    db.move_category(conn, "juan", "youtube", -1)
+    assert list(db.list_bookmarks_grouped_by_category(conn, "juan").keys()) == ["youtube", "apps", "sports"]
+
+    # already first: moving further up is a no-op
+    db.move_category(conn, "juan", "youtube", -1)
+    assert list(db.list_bookmarks_grouped_by_category(conn, "juan").keys()) == ["youtube", "apps", "sports"]
+
+    db.move_category(conn, "juan", "youtube", 1)
+    assert list(db.list_bookmarks_grouped_by_category(conn, "juan").keys()) == ["apps", "youtube", "sports"]
+
+
+def test_move_category_backfills_positions_for_legacy_categories():
+    conn = db.open_connection(":memory:")
+    conn.executescript(db.SCHEMA)
+    # simulate bookmarks that predate the category_order table
+    conn.execute(
+        "INSERT INTO bookmarks (owner_username, category, name, url, created_at) VALUES (?, ?, ?, ?, ?)",
+        ("juan", "zzz-legacy", "Old", "https://old.dev", "2020-01-01"),
+    )
+    conn.execute(
+        "INSERT INTO bookmarks (owner_username, category, name, url, created_at) VALUES (?, ?, ?, ?, ?)",
+        ("juan", "aaa-legacy", "Older", "https://older.dev", "2020-01-01"),
+    )
+    conn.commit()
+
+    db.move_category(conn, "juan", "zzz-legacy", -1)
+    assert list(db.list_bookmarks_grouped_by_category(conn, "juan").keys()) == ["zzz-legacy", "aaa-legacy"]
+
+
 def test_birthdays_crud_and_scoping(conn):
     birthday = db.create_birthday(conn, "juan", "Alex", 6, 1)
     assert birthday["month"] == 6

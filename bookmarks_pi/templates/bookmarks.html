@@ -167,7 +167,21 @@
   <div class="bookmark-groups">
     {% for category, items in bookmarks_by_category.items() %}
     <section class="bookmark-group">
-      <h2>{{ category }}</h2>
+      <div class="bookmark-group-header">
+        <h2>{{ category }}</h2>
+        <div class="category-reorder">
+          <form method="post" action="/bookmarks/categories/move">
+            <input type="hidden" name="category" value="{{ category }}" />
+            <input type="hidden" name="direction" value="up" />
+            <button type="submit" {% if loop.first %}disabled{% endif %} aria-label="Move {{ category }} earlier">&uarr;</button>
+          </form>
+          <form method="post" action="/bookmarks/categories/move">
+            <input type="hidden" name="category" value="{{ category }}" />
+            <input type="hidden" name="direction" value="down" />
+            <button type="submit" {% if loop.last %}disabled{% endif %} aria-label="Move {{ category }} later">&darr;</button>
+          </form>
+        </div>
+      </div>
       <ul class="bookmark-list">
         {% for bookmark in items %}
         <li>
