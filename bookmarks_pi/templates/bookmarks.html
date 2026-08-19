@@ -254,7 +254,7 @@
         {% endfor %}
       </ul>
       {% if items|length > 5 %}
-      <details class="bookmark-more">
+      <details class="bookmark-more" {% if open_more_category == category %}open{% endif %}>
         <summary>Show {{ items|length - 5 }} more</summary>
         <ul class="bookmark-list">
           {% for bookmark in items[5:] %}

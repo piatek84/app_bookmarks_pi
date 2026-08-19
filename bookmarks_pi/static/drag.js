@@ -118,7 +118,10 @@
 
     document.querySelectorAll(".bookmark-group[data-category]").forEach(function (group) {
       setupDragReorder(group, "li[data-id]", null, "id", function (order) {
-        submitReorder("/bookmarks/reorder", { category: group.dataset.category }, "id", order);
+        var more = group.querySelector(".bookmark-more");
+        var fields = { category: group.dataset.category };
+        if (more && more.open) fields.open_more = "1";
+        submitReorder("/bookmarks/reorder", fields, "id", order);
       });
     });
   });

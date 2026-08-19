@@ -136,6 +136,7 @@ def bookmarks_page(
     conn=Depends(get_db),
     open_manage: Optional[str] = None,
     open_bookmarks: Optional[str] = None,
+    open_more: Optional[str] = None,
     undo: Optional[str] = None,
     title: Optional[str] = None,
     month: Optional[int] = None,
@@ -168,6 +169,7 @@ def bookmarks_page(
         shift_start=shift_start,
         open_manage=bool(open_manage),
         open_bookmarks=bool(open_bookmarks),
+        open_more_category=open_more,
         undo=_build_undo_context(undo, title, month, day, start_date, end_date, category, name, url),
         error=None,
     )
@@ -368,9 +370,17 @@ def reorder_categories(request: Request, category: list[str] = Form(...), conn=D
 
 
 @app.post("/bookmarks/reorder")
-def reorder_bookmarks(request: Request, category: str = Form(...), id: list[int] = Form(...), conn=Depends(get_db)):
+def reorder_bookmarks(
+    request: Request,
+    category: str = Form(...),
+    id: list[int] = Form(...),
+    open_more: Optional[str] = Form(None),
+    conn=Depends(get_db),
+):
     username = _current_username(request)
     if not username:
         return RedirectResponse("/", status_code=303)
     db.reorder_bookmarks(conn, username, category, id)
-    return _redirect_to_bookmarks(fragment=f"category-{slugify(category)}")
+    return _redirect_to_bookmarks(
+        fragment=f"category-{slugify(category)}", open_more=category if open_more else None
+    )

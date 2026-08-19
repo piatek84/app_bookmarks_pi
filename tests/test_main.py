@@ -205,6 +205,43 @@ def test_reorder_bookmarks_endpoint_sets_order_within_category(client):
     assert [b["id"] for b in grouped["apps"]] == reordered_ids
 
 
+def test_reorder_bookmarks_reopens_show_more_when_it_was_open(client):
+    for i in range(7):
+        client.post("/bookmarks", data={"category": "apps", "name": f"Link {i}", "url": f"https://{i}.dev"})
+    conn = db.open_connection(main.settings.database_path)
+    ids = [b["id"] for b in db.list_bookmarks(conn, "juan", category="apps")]
+    conn.close()
+
+    r = client.post(
+        "/bookmarks/reorder",
+        data={"category": "apps", "id": [str(i) for i in ids], "open_more": "1"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    assert "open_more=apps" in r.headers["location"]
+
+    r = client.get(r.headers["location"].split("#")[0])
+    assert '<details class="bookmark-more" open>' in r.text
+
+
+def test_reorder_bookmarks_leaves_show_more_closed_when_it_was_closed(client):
+    for i in range(7):
+        client.post("/bookmarks", data={"category": "apps", "name": f"Link {i}", "url": f"https://{i}.dev"})
+    conn = db.open_connection(main.settings.database_path)
+    ids = [b["id"] for b in db.list_bookmarks(conn, "juan", category="apps")]
+    conn.close()
+
+    r = client.post(
+        "/bookmarks/reorder",
+        data={"category": "apps", "id": [str(i) for i in ids]},
+        follow_redirects=False,
+    )
+    assert "open_more" not in r.headers["location"]
+
+    r = client.get(r.headers["location"].split("#")[0])
+    assert '<details class="bookmark-more" >' in r.text
+
+
 def test_slugify_produces_url_safe_ids():
     assert main.slugify("apps") == "apps"
     assert main.slugify("Cool Apps!") == "cool-apps"
