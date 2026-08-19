@@ -76,3 +76,50 @@ def test_delete_bookmark_scoped_per_owner(conn):
     bookmark = db.create_bookmark(conn, "juan", "reading", "Blog", "https://blog.dev")
     assert db.delete_bookmark(conn, "other", bookmark["id"]) is False
     assert len(db.list_bookmarks(conn, "juan")) == 1
+
+
+def test_list_bookmarks_grouped_by_category(conn):
+    db.create_bookmark(conn, "juan", "reading", "Blog", "https://blog.dev")
+    db.create_bookmark(conn, "juan", "reading", "Feed", "https://feed.dev")
+    db.create_bookmark(conn, "juan", "tools", "Vite", "https://vite.dev")
+
+    grouped = db.list_bookmarks_grouped_by_category(conn, "juan")
+
+    assert list(grouped.keys()) == ["reading", "tools"]
+    assert [b["name"] for b in grouped["reading"]] == ["Feed", "Blog"]
+    assert [b["name"] for b in grouped["tools"]] == ["Vite"]
+
+
+def test_list_bookmarks_grouped_by_category_scoped_per_owner(conn):
+    db.create_bookmark(conn, "juan", "reading", "Blog", "https://blog.dev")
+    assert db.list_bookmarks_grouped_by_category(conn, "other") == {}
+
+
+def test_birthdays_crud_and_scoping(conn):
+    birthday = db.create_birthday(conn, "juan", "Alex", 6, 1)
+    assert birthday["month"] == 6
+    assert birthday["day"] == 1
+    assert [b["title"] for b in db.list_birthdays(conn, "juan")] == ["Alex"]
+    assert db.list_birthdays(conn, "other") == []
+    assert db.delete_birthday(conn, "other", birthday["id"]) is False
+    assert db.delete_birthday(conn, "juan", birthday["id"]) is True
+    assert db.list_birthdays(conn, "juan") == []
+
+
+def test_vacations_crud_and_scoping(conn):
+    vacation = db.create_vacation(conn, "juan", "Trip", "2026-08-01", "2026-08-10")
+    assert vacation["start_date"] == "2026-08-01"
+    assert [v["title"] for v in db.list_vacations(conn, "juan")] == ["Trip"]
+    assert db.list_vacations(conn, "other") == []
+    assert db.delete_vacation(conn, "other", vacation["id"]) is False
+    assert db.delete_vacation(conn, "juan", vacation["id"]) is True
+    assert db.list_vacations(conn, "juan") == []
+
+
+def test_work_shift_start_upsert_and_scoping(conn):
+    assert db.get_work_shift_start(conn, "juan") is None
+    db.set_work_shift_start(conn, "juan", "2026-01-01")
+    assert db.get_work_shift_start(conn, "juan") == "2026-01-01"
+    db.set_work_shift_start(conn, "juan", "2026-02-01")
+    assert db.get_work_shift_start(conn, "juan") == "2026-02-01"
+    assert db.get_work_shift_start(conn, "other") is None

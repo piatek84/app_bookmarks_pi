@@ -38,6 +38,17 @@ app_bookmarks_pi/
   TTL index) since this is a tiny personal DB.
 - **`bookmarks`** -- `owner_username`, `category`, `name`, `url`,
   `created_at`. Indexed on `(owner_username, category)`.
+- **`birthdays`** -- `owner_username`, `title`, `month`, `day` (no year --
+  recurs every year), `created_at`.
+- **`vacations`** -- `owner_username`, `title`, `start_date`, `end_date`
+  (both `YYYY-MM-DD`).
+- **`work_shifts`** -- one row per `owner_username`, `start_date`. The
+  calendar computes a 6-days-on/3-days-off rest cycle forward from that date
+  (`bookmarks_pi/calendar_service.py`); there's no signup endpoint for it
+  either, it's set from the "Work shift" form on the bookmarks page.
+
+All three are scoped per `owner_username`, same as bookmarks -- each user's
+calendar is private to them.
 
 ## Running locally
 
@@ -103,7 +114,9 @@ to deploy, since it's a decision about your home network, not the app.
 ## Status
 
 Scaffolded: passwordless login (request code -> Telegram -> verify -> session
-cookie), bookmark create/list/filter-by-category, SQLite schema, seed
-script, systemd unit example. Not run against a real Telegram bot yet --
-next step is to fill in `.env` with the real token, seed a user, and walk
-the happy path locally before deploying to the Pi.
+cookie), bookmark create/list/filter-by-category, a per-user calendar
+(birthdays, vacations, auto-computed work-shift rest days) rendered above the
+bookmark list, SQLite schema, seed script, systemd unit example. Not run
+against a real Telegram bot yet -- next step is to fill in `.env` with the
+real token, seed a user, and walk the happy path locally before deploying to
+the Pi.

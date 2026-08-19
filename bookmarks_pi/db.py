@@ -34,6 +34,31 @@ CREATE TABLE IF NOT EXISTS bookmarks (
 );
 CREATE INDEX IF NOT EXISTS idx_bookmarks_owner_category
     ON bookmarks (owner_username, category);
+
+CREATE TABLE IF NOT EXISTS birthdays (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    owner_username TEXT NOT NULL,
+    title TEXT NOT NULL,
+    month INTEGER NOT NULL,
+    day INTEGER NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_birthdays_owner ON birthdays (owner_username);
+
+CREATE TABLE IF NOT EXISTS vacations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    owner_username TEXT NOT NULL,
+    title TEXT NOT NULL,
+    start_date TEXT NOT NULL,
+    end_date TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vacations_owner ON vacations (owner_username);
+
+CREATE TABLE IF NOT EXISTS work_shifts (
+    owner_username TEXT PRIMARY KEY,
+    start_date TEXT NOT NULL
+);
 """
 
 
@@ -134,3 +159,81 @@ def list_categories(conn: sqlite3.Connection, owner_username: str) -> list[str]:
         (owner_username,),
     ).fetchall()
     return [row["category"] for row in rows]
+
+
+def list_bookmarks_grouped_by_category(conn: sqlite3.Connection, owner_username: str) -> dict[str, list[sqlite3.Row]]:
+    rows = conn.execute(
+        "SELECT * FROM bookmarks WHERE owner_username = ? ORDER BY category, created_at DESC",
+        (owner_username,),
+    ).fetchall()
+    grouped: dict[str, list[sqlite3.Row]] = {}
+    for row in rows:
+        grouped.setdefault(row["category"], []).append(row)
+    return grouped
+
+
+def create_birthday(conn: sqlite3.Connection, owner_username: str, title: str, month: int, day: int) -> sqlite3.Row:
+    cursor = conn.execute(
+        "INSERT INTO birthdays (owner_username, title, month, day, created_at) VALUES (?, ?, ?, ?, ?)",
+        (owner_username, title, month, day, _now()),
+    )
+    conn.commit()
+    return conn.execute("SELECT * FROM birthdays WHERE id = ?", (cursor.lastrowid,)).fetchone()
+
+
+def list_birthdays(conn: sqlite3.Connection, owner_username: str) -> list[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM birthdays WHERE owner_username = ? ORDER BY month, day",
+        (owner_username,),
+    ).fetchall()
+
+
+def delete_birthday(conn: sqlite3.Connection, owner_username: str, birthday_id: int) -> bool:
+    cursor = conn.execute(
+        "DELETE FROM birthdays WHERE id = ? AND owner_username = ?",
+        (birthday_id, owner_username),
+    )
+    conn.commit()
+    return cursor.rowcount > 0
+
+
+def create_vacation(conn: sqlite3.Connection, owner_username: str, title: str, start_date: str, end_date: str) -> sqlite3.Row:
+    cursor = conn.execute(
+        "INSERT INTO vacations (owner_username, title, start_date, end_date, created_at) VALUES (?, ?, ?, ?, ?)",
+        (owner_username, title, start_date, end_date, _now()),
+    )
+    conn.commit()
+    return conn.execute("SELECT * FROM vacations WHERE id = ?", (cursor.lastrowid,)).fetchone()
+
+
+def list_vacations(conn: sqlite3.Connection, owner_username: str) -> list[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM vacations WHERE owner_username = ? ORDER BY start_date",
+        (owner_username,),
+    ).fetchall()
+
+
+def delete_vacation(conn: sqlite3.Connection, owner_username: str, vacation_id: int) -> bool:
+    cursor = conn.execute(
+        "DELETE FROM vacations WHERE id = ? AND owner_username = ?",
+        (vacation_id, owner_username),
+    )
+    conn.commit()
+    return cursor.rowcount > 0
+
+
+def set_work_shift_start(conn: sqlite3.Connection, owner_username: str, start_date: str) -> None:
+    conn.execute(
+        """INSERT INTO work_shifts (owner_username, start_date) VALUES (?, ?)
+           ON CONFLICT(owner_username) DO UPDATE SET start_date = excluded.start_date""",
+        (owner_username, start_date),
+    )
+    conn.commit()
+
+
+def get_work_shift_start(conn: sqlite3.Connection, owner_username: str) -> Optional[str]:
+    row = conn.execute(
+        "SELECT start_date FROM work_shifts WHERE owner_username = ?",
+        (owner_username,),
+    ).fetchone()
+    return row["start_date"] if row else None

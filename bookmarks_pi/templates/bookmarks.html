@@ -1,45 +1,145 @@
 {% extends "base.html" %}
 {% block title %}{{ username }}'s bookmarks{% endblock %}
 {% block content %}
-<div class="bookmarks-page">
+<div class="page">
   <h1>{{ username }}&apos;s bookmarks <a class="logout" href="/logout">Log out</a></h1>
 
+  <section class="calendar-section">
+    <div class="calendar-row">
+      {% for month in calendar_months %}
+      <div class="calendar">
+        <h3>{{ month.label }}</h3>
+        <div class="days-row">
+          {% for day_header in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+          <span class="day-header">{{ day_header }}</span>
+          {% endfor %}
+        </div>
+        <div class="days-grid">
+          {% for week in month.weeks %}
+            {% for day in week %}
+              {% if day is none %}
+              <span class="day"></span>
+              {% else %}
+              <span
+                class="day{% if day.is_past %} past-day{% endif %}{% if day.is_today %} current-day{% endif %}{% if day.birthday_title %} birthday-day{% endif %}{% if day.vacation_title %} vacation-day{% endif %}{% if day.is_rest_day %} rest-day{% endif %}"
+                {% if day.birthday_title %}title="{{ day.birthday_title }}"{% elif day.vacation_title %}title="{{ day.vacation_title }}"{% endif %}
+              >{{ day.day }}</span>
+              {% endif %}
+            {% endfor %}
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="calendar-legend">
+      <span class="legend-item"><span class="legend-swatch birthday-day"></span>Birthday</span>
+      <span class="legend-item"><span class="legend-swatch vacation-day"></span>Vacation</span>
+      <span class="legend-item"><span class="legend-swatch rest-day"></span>Rest day</span>
+      <span class="legend-item"><span class="legend-swatch current-day"></span>Today</span>
+    </div>
+
+    <details class="calendar-settings">
+      <summary>Manage calendar</summary>
+      <div class="calendar-manage">
+        <div class="manage-card">
+          <h2>Birthdays</h2>
+          <form class="calendar-form" method="post" action="/calendar/birthdays">
+            <input placeholder="Name" name="title" required />
+            <div class="date-fields">
+              <input name="day" type="number" placeholder="Day" min="1" max="31" required />
+              <select name="month" required>
+                <option value="" selected disabled>Month</option>
+                {% for month_name in ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] %}
+                <option value="{{ loop.index }}">{{ month_name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <button type="submit">Add</button>
+          </form>
+          <ul class="calendar-list">
+            {% for b in birthdays %}
+            <li>
+              <span>{{ '%02d'|format(b['day']) }}/{{ '%02d'|format(b['month']) }} - {{ b['title'] }}</span>
+              <form method="post" action="/calendar/birthdays/{{ b['id'] }}/delete">
+                <button type="submit" class="delete-btn" aria-label="Delete {{ b['title'] }}">&times;</button>
+              </form>
+            </li>
+            {% else %}
+            <li class="empty">No birthdays yet.</li>
+            {% endfor %}
+          </ul>
+        </div>
+
+        <div class="manage-card">
+          <h2>Vacations</h2>
+          <form class="calendar-form" method="post" action="/calendar/vacations">
+            <input placeholder="Name" name="title" required />
+            <input name="start_date" type="date" required />
+            <input name="end_date" type="date" required />
+            <button type="submit">Add</button>
+          </form>
+          <ul class="calendar-list">
+            {% for v in vacations %}
+            <li>
+              <span>{{ v['start_date'] }} → {{ v['end_date'] }} - {{ v['title'] }}</span>
+              <form method="post" action="/calendar/vacations/{{ v['id'] }}/delete">
+                <button type="submit" class="delete-btn" aria-label="Delete {{ v['title'] }}">&times;</button>
+              </form>
+            </li>
+            {% else %}
+            <li class="empty">No vacations yet.</li>
+            {% endfor %}
+          </ul>
+        </div>
+
+        <div class="manage-card">
+          <h2>Work shift</h2>
+          <p class="hint">Automatic cycle of 6 work days followed by 3 rest days, computed from the cycle start date.</p>
+          <form class="calendar-form" method="post" action="/calendar/shift">
+            <label>
+              Cycle start date (a work day)
+              <input name="start_date" type="date" value="{{ shift_start or '' }}" required />
+            </label>
+            <button type="submit">Save</button>
+          </form>
+        </div>
+      </div>
+    </details>
+  </section>
+
   <form class="bookmark-form" method="post" action="/bookmarks">
-    <input placeholder="Category" name="category" required />
+    <input placeholder="Category" name="category" list="category-options" required />
+    <datalist id="category-options">
+      {% for c in categories %}
+      <option value="{{ c }}"></option>
+      {% endfor %}
+    </datalist>
     <input placeholder="Name" name="name" required />
     <input placeholder="https://..." name="url" type="url" required />
     <button type="submit">Add bookmark</button>
   </form>
 
-  <form class="filter" method="get" action="/bookmarks">
-    <label>
-      Filter by category
-      <select name="category">
-        <option value="" {% if not category_filter %}selected{% endif %}>All</option>
-        {% for c in categories %}
-        <option value="{{ c }}" {% if c == category_filter %}selected{% endif %}>{{ c }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <button type="submit">Filter</button>
-  </form>
-
   {% if error %}<p class="error">{{ error }}</p>{% endif %}
 
-  <ul class="bookmark-list">
-    {% for bookmark in bookmarks %}
-    <li>
-      <a href="{{ bookmark['url'] }}" target="_blank" rel="noreferrer">{{ bookmark['name'] }}</a>
-      <span class="bookmark-meta">
-        <span class="category-tag">{{ bookmark['category'] }}</span>
-        <form method="post" action="/bookmarks/{{ bookmark['id'] }}/delete">
-          <button type="submit" class="delete-btn" aria-label="Delete {{ bookmark['name'] }}">&times;</button>
-        </form>
-      </span>
-    </li>
+  <div class="bookmark-groups">
+    {% for category, items in bookmarks_by_category.items() %}
+    <section class="bookmark-group">
+      <h2>{{ category }}</h2>
+      <ul class="bookmark-list">
+        {% for bookmark in items %}
+        <li>
+          <a href="{{ bookmark['url'] }}" target="_blank" rel="noreferrer">{{ bookmark['name'] }}</a>
+          <form method="post" action="/bookmarks/{{ bookmark['id'] }}/delete">
+            <button type="submit" class="delete-btn" aria-label="Delete {{ bookmark['name'] }}">&times;</button>
+          </form>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
     {% else %}
-    <li class="empty">No bookmarks yet.</li>
+    <p class="empty">No bookmarks yet.</p>
     {% endfor %}
-  </ul>
+  </div>
 </div>
 {% endblock %}
