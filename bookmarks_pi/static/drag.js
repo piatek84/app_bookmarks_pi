@@ -36,7 +36,7 @@
     return closest;
   }
 
-  function setupDragReorder(container, selector, ignoreSelector, onDrop) {
+  function setupDragReorder(container, selector, ignoreSelector, datasetKey, onDrop) {
     var items = container.querySelectorAll(selector);
     for (var i = 0; i < items.length; i++) {
       items[i].setAttribute("draggable", "true");
@@ -76,7 +76,7 @@
       if (!dragEl) return;
       event.preventDefault();
       var order = Array.prototype.map.call(container.querySelectorAll(selector), function (item) {
-        return item.dataset.id;
+        return item.dataset[datasetKey];
       });
       onDrop(order);
     });
@@ -111,13 +111,13 @@
   document.addEventListener("DOMContentLoaded", function () {
     var categoriesContainer = document.querySelector(".bookmark-groups");
     if (categoriesContainer) {
-      setupDragReorder(categoriesContainer, ".bookmark-group", "li[data-id]", function (order) {
+      setupDragReorder(categoriesContainer, ".bookmark-group", "li[data-id]", "category", function (order) {
         submitReorder("/bookmarks/categories/reorder", {}, "category", order);
       });
     }
 
     document.querySelectorAll(".bookmark-group[data-category]").forEach(function (group) {
-      setupDragReorder(group, "li[data-id]", null, function (order) {
+      setupDragReorder(group, "li[data-id]", null, "id", function (order) {
         submitReorder("/bookmarks/reorder", { category: group.dataset.category }, "id", order);
       });
     });
