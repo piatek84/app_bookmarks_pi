@@ -171,6 +171,40 @@ def test_move_category_reorders_bookmark_sections(client):
     assert r.text.index(">sports<") < r.text.index(">apps<")
 
 
+def test_reorder_categories_endpoint_sets_full_order(client):
+    client.post("/bookmarks", data={"category": "apps", "name": "A", "url": "https://a.dev"})
+    client.post("/bookmarks", data={"category": "sports", "name": "B", "url": "https://b.dev"})
+    client.post("/bookmarks", data={"category": "youtube", "name": "C", "url": "https://c.dev"})
+
+    r = client.post("/bookmarks/categories/reorder", data={"category": ["youtube", "apps", "sports"]})
+    assert r.status_code == 200
+    positions = [r.text.index(f">{c}<") for c in ("youtube", "apps", "sports")]
+    assert positions == sorted(positions)
+
+
+def test_reorder_bookmarks_endpoint_sets_order_within_category(client):
+    client.post("/bookmarks", data={"category": "apps", "name": "A", "url": "https://a.dev"})
+    client.post("/bookmarks", data={"category": "apps", "name": "B", "url": "https://b.dev"})
+    conn = db.open_connection(main.settings.database_path)
+    ids = [b["id"] for b in db.list_bookmarks(conn, "juan", category="apps")]
+    conn.close()
+    # list_bookmarks (by created_at) returns newest first: [B, A] -- reorder to A, B
+    reordered_ids = list(reversed(ids))
+
+    r = client.post(
+        "/bookmarks/reorder",
+        data={"category": "apps", "id": [str(i) for i in reordered_ids]},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    assert r.headers["location"].endswith("#category-apps")
+
+    conn = db.open_connection(main.settings.database_path)
+    grouped = db.list_bookmarks_grouped_by_category(conn, "juan")
+    conn.close()
+    assert [b["id"] for b in grouped["apps"]] == reordered_ids
+
+
 def test_slugify_produces_url_safe_ids():
     assert main.slugify("apps") == "apps"
     assert main.slugify("Cool Apps!") == "cool-apps"

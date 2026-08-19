@@ -12,6 +12,35 @@ def conn(tmp_path):
     connection.close()
 
 
+def test_init_db_adds_position_column_to_pre_existing_bookmarks_table(tmp_path):
+    import sqlite3
+
+    database_path = str(tmp_path / "legacy.db")
+    legacy_conn = sqlite3.connect(database_path)
+    legacy_conn.execute(
+        """CREATE TABLE bookmarks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_username TEXT NOT NULL,
+            category TEXT NOT NULL,
+            name TEXT NOT NULL,
+            url TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )"""
+    )
+    legacy_conn.execute(
+        "INSERT INTO bookmarks (owner_username, category, name, url, created_at) VALUES (?, ?, ?, ?, ?)",
+        ("juan", "tools", "Old", "https://old.dev", "2020-01-01"),
+    )
+    legacy_conn.commit()
+    legacy_conn.close()
+
+    db.init_db(database_path)  # must not raise on a table missing the new column
+    conn = db.open_connection(database_path)
+    grouped = db.list_bookmarks_grouped_by_category(conn, "juan")
+    assert [b["name"] for b in grouped["tools"]] == ["Old"]
+    conn.close()
+
+
 def test_create_and_get_user(conn):
     db.create_user(conn, "juan", 12345)
     user = db.get_user(conn, "juan")
@@ -108,7 +137,7 @@ def test_list_bookmarks_grouped_by_category(conn):
     grouped = db.list_bookmarks_grouped_by_category(conn, "juan")
 
     assert list(grouped.keys()) == ["reading", "tools"]
-    assert [b["name"] for b in grouped["reading"]] == ["Feed", "Blog"]
+    assert [b["name"] for b in grouped["reading"]] == ["Blog", "Feed"]
     assert [b["name"] for b in grouped["tools"]] == ["Vite"]
 
 
@@ -124,6 +153,44 @@ def test_categories_are_ordered_by_first_use(conn):
 
     grouped = db.list_bookmarks_grouped_by_category(conn, "juan")
     assert list(grouped.keys()) == ["tools", "reading"]
+
+
+def test_reorder_categories_sets_explicit_order(conn):
+    db.create_bookmark(conn, "juan", "apps", "A", "https://a.dev")
+    db.create_bookmark(conn, "juan", "sports", "B", "https://b.dev")
+    db.create_bookmark(conn, "juan", "youtube", "C", "https://c.dev")
+
+    db.reorder_categories(conn, "juan", ["youtube", "apps", "sports"])
+    assert list(db.list_bookmarks_grouped_by_category(conn, "juan").keys()) == ["youtube", "apps", "sports"]
+
+
+def test_reorder_bookmarks_sets_explicit_order(conn):
+    a = db.create_bookmark(conn, "juan", "apps", "A", "https://a.dev")
+    b = db.create_bookmark(conn, "juan", "apps", "B", "https://b.dev")
+    c = db.create_bookmark(conn, "juan", "apps", "C", "https://c.dev")
+
+    db.reorder_bookmarks(conn, "juan", "apps", [c["id"], a["id"], b["id"]])
+    grouped = db.list_bookmarks_grouped_by_category(conn, "juan")
+    assert [bm["name"] for bm in grouped["apps"]] == ["C", "A", "B"]
+
+
+def test_reorder_bookmarks_scoped_per_category(conn):
+    a = db.create_bookmark(conn, "juan", "apps", "A", "https://a.dev")
+    db.create_bookmark(conn, "juan", "apps", "B", "https://b.dev")
+    other = db.create_bookmark(conn, "juan", "sports", "Other", "https://other.dev")
+
+    # reordering "apps" must not touch a bookmark that lives in "sports"
+    db.reorder_bookmarks(conn, "juan", "apps", [other["id"], a["id"]])
+    assert db.get_bookmark(conn, "juan", other["id"])["category"] == "sports"
+
+
+def test_updating_a_bookmark_into_a_new_category_appends_at_the_end(conn):
+    db.create_bookmark(conn, "juan", "sports", "Existing", "https://existing.dev")
+    moved = db.create_bookmark(conn, "juan", "apps", "Moved", "https://moved.dev")
+
+    db.update_bookmark(conn, "juan", moved["id"], "sports", "Moved", "https://moved.dev")
+    grouped = db.list_bookmarks_grouped_by_category(conn, "juan")
+    assert [bm["name"] for bm in grouped["sports"]] == ["Existing", "Moved"]
 
 
 def test_move_category_swaps_positions():

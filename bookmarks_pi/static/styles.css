@@ -154,11 +154,18 @@ button:hover {
   padding: 0.6rem 0.8rem;
   border: 1px solid var(--border);
   border-radius: 4px;
+  cursor: grab;
 }
 
 .bookmark-list li.empty {
   justify-content: center;
   color: var(--muted);
+  cursor: default;
+}
+
+.bookmark-list li.dragging,
+.bookmark-group.dragging {
+  opacity: 0.4;
 }
 
 .bookmark-list a {
@@ -182,6 +189,7 @@ button:hover {
   justify-content: space-between;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
+  cursor: grab;
 }
 
 .bookmark-group-header h2 {

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ username }}'s bookmarks{% endblock %}
 {% macro bookmark_item(bookmark) %}
-<li>
+<li data-id="{{ bookmark['id'] }}">
   <a href="{{ bookmark['url'] }}" target="_blank" rel="noreferrer">{{ bookmark['name'] }}</a>
   <span class="bookmark-actions">
     <a href="#edit-bookmark-{{ bookmark['id'] }}" class="edit-btn" aria-label="Edit {{ bookmark['name'] }}"><span class="edit-icon">&#9998;</span></a>
@@ -232,7 +232,7 @@
 
   <div class="bookmark-groups">
     {% for category, items in bookmarks_by_category.items() %}
-    <section class="bookmark-group" id="category-{{ category|slugify }}">
+    <section class="bookmark-group" id="category-{{ category|slugify }}" data-category="{{ category }}">
       <div class="bookmark-group-header">
         <h2>{{ category }}</h2>
         <div class="category-reorder">
@@ -269,4 +269,7 @@
     {% endfor %}
   </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/drag.js" defer></script>
 {% endblock %}

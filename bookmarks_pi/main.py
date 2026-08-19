@@ -356,3 +356,21 @@ def move_category(request: Request, category: str = Form(...), direction: str = 
         return RedirectResponse("/", status_code=303)
     db.move_category(conn, username, category, -1 if direction == "up" else 1)
     return _redirect_to_bookmarks(fragment=f"category-{slugify(category)}")
+
+
+@app.post("/bookmarks/categories/reorder")
+def reorder_categories(request: Request, category: list[str] = Form(...), conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    db.reorder_categories(conn, username, category)
+    return _redirect_to_bookmarks()
+
+
+@app.post("/bookmarks/reorder")
+def reorder_bookmarks(request: Request, category: str = Form(...), id: list[int] = Form(...), conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    db.reorder_bookmarks(conn, username, category, id)
+    return _redirect_to_bookmarks(fragment=f"category-{slugify(category)}")
