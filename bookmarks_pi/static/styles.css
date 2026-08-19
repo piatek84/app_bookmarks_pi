@@ -204,8 +204,8 @@ button:hover {
 /* Calendar */
 
 .calendar-section {
-  margin-bottom: 1.5rem;
-  padding-bottom: 1.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
   border-bottom: 1px solid var(--border);
 }
 
@@ -218,12 +218,12 @@ button:hover {
 .calendar {
   border: 1px solid var(--border);
   border-radius: 4px;
-  padding: 0.65rem;
+  padding: 0.5rem;
 }
 
 .calendar h3 {
-  margin: 0 0 0.5rem;
-  font-size: 0.75rem;
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -238,10 +238,10 @@ button:hover {
 }
 
 .day-header {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   color: var(--muted);
   text-align: center;
-  padding-bottom: 0.25rem;
+  padding-bottom: 0.15rem;
 }
 
 .day {
@@ -249,8 +249,8 @@ button:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  aspect-ratio: 1;
-  font-size: 0.68rem;
+  aspect-ratio: 1.6;
+  font-size: 0.65rem;
   border-radius: 3px;
 }
 
