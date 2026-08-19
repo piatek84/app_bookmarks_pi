@@ -108,6 +108,22 @@
     form.submit();
   }
 
+  // Plain forms (edit/delete/move) do a full page reload too; tag them the
+  // same way so an open "show more" list doesn't snap shut on save just
+  // because the server re-renders <details> without an open attribute.
+  document.addEventListener("submit", function (event) {
+    var form = event.target;
+    var group = form.closest(".bookmark-group[data-category]");
+    if (!group) return;
+    var more = group.querySelector(".bookmark-more");
+    if (!more || !more.open || form.querySelector('input[name="open_more"]')) return;
+    var input = document.createElement("input");
+    input.type = "hidden";
+    input.name = "open_more";
+    input.value = "1";
+    form.appendChild(input);
+  });
+
   document.addEventListener("DOMContentLoaded", function () {
     var categoriesContainer = document.querySelector(".bookmark-groups");
     if (categoriesContainer) {

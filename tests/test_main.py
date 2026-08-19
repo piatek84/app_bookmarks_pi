@@ -106,6 +106,42 @@ def test_edit_bookmark_updates_it_and_redirects_to_new_category_anchor(client):
     assert updated["name"] == "New name"
 
 
+def test_editing_a_bookmark_past_the_fold_reopens_show_more(client):
+    for i in range(7):
+        client.post("/bookmarks", data={"category": "apps", "name": f"Link {i}", "url": f"https://{i}.dev"})
+    conn = db.open_connection(main.settings.database_path)
+    bookmark_id = db.list_bookmarks(conn, "juan", category="apps")[6]["id"]
+    conn.close()
+
+    r = client.post(
+        f"/bookmarks/{bookmark_id}/edit",
+        data={"category": "apps", "name": "Renamed", "url": "https://renamed.dev", "open_more": "1"},
+        follow_redirects=False,
+    )
+    assert "open_more=apps" in r.headers["location"]
+
+    r = client.get(r.headers["location"].split("#")[0])
+    assert '<details class="bookmark-more" open>' in r.text
+
+
+def test_editing_a_bookmark_without_open_more_leaves_show_more_closed(client):
+    for i in range(7):
+        client.post("/bookmarks", data={"category": "apps", "name": f"Link {i}", "url": f"https://{i}.dev"})
+    conn = db.open_connection(main.settings.database_path)
+    bookmark_id = db.list_bookmarks(conn, "juan", category="apps")[0]["id"]
+    conn.close()
+
+    r = client.post(
+        f"/bookmarks/{bookmark_id}/edit",
+        data={"category": "apps", "name": "Renamed", "url": "https://renamed.dev"},
+        follow_redirects=False,
+    )
+    assert "open_more" not in r.headers["location"]
+
+    r = client.get(r.headers["location"].split("#")[0])
+    assert '<details class="bookmark-more" >' in r.text
+
+
 def test_bookmark_edit_modal_is_present_and_hidden_by_default(client):
     client.post("/bookmarks", data={"category": "reading", "name": "Blog", "url": "https://blog.dev"})
     conn = db.open_connection(main.settings.database_path)

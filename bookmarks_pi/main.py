@@ -319,17 +319,20 @@ def edit_bookmark(
     category: str = Form(...),
     name: str = Form(...),
     url: str = Form(...),
+    open_more: Optional[str] = Form(None),
     conn=Depends(get_db),
 ):
     username = _current_username(request)
     if not username:
         return RedirectResponse("/", status_code=303)
     db.update_bookmark(conn, username, bookmark_id, category, name, url)
-    return _redirect_to_bookmarks(fragment=f"category-{slugify(category)}")
+    return _redirect_to_bookmarks(
+        fragment=f"category-{slugify(category)}", open_more=category if open_more else None
+    )
 
 
 @app.post("/bookmarks/{bookmark_id}/delete")
-def delete_bookmark(request: Request, bookmark_id: int, conn=Depends(get_db)):
+def delete_bookmark(request: Request, bookmark_id: int, open_more: Optional[str] = Form(None), conn=Depends(get_db)):
     username = _current_username(request)
     if not username:
         return RedirectResponse("/", status_code=303)
@@ -338,7 +341,12 @@ def delete_bookmark(request: Request, bookmark_id: int, conn=Depends(get_db)):
         return _redirect_to_bookmarks()
     db.delete_bookmark(conn, username, bookmark_id)
     return _redirect_to_bookmarks(
-        undo="bookmark", category=row["category"], name=row["name"], url=row["url"], fragment=f"category-{slugify(row['category'])}"
+        undo="bookmark",
+        category=row["category"],
+        name=row["name"],
+        url=row["url"],
+        fragment=f"category-{slugify(row['category'])}",
+        open_more=row["category"] if open_more else None,
     )
 
 
@@ -352,12 +360,20 @@ def restore_bookmark(request: Request, category: str = Form(...), name: str = Fo
 
 
 @app.post("/bookmarks/categories/move")
-def move_category(request: Request, category: str = Form(...), direction: str = Form(...), conn=Depends(get_db)):
+def move_category(
+    request: Request,
+    category: str = Form(...),
+    direction: str = Form(...),
+    open_more: Optional[str] = Form(None),
+    conn=Depends(get_db),
+):
     username = _current_username(request)
     if not username:
         return RedirectResponse("/", status_code=303)
     db.move_category(conn, username, category, -1 if direction == "up" else 1)
-    return _redirect_to_bookmarks(fragment=f"category-{slugify(category)}")
+    return _redirect_to_bookmarks(
+        fragment=f"category-{slugify(category)}", open_more=category if open_more else None
+    )
 
 
 @app.post("/bookmarks/categories/reorder")
