@@ -87,6 +87,8 @@ def _build_undo_context(
         return {"label": f'holiday "{title}"', "action": "/calendar/holidays/restore", "fields": {"title": title, "month": month, "day": day}}
     if undo == "vacation" and None not in (title, start_date, end_date):
         return {"label": f'vacation "{title}"', "action": "/calendar/vacations/restore", "fields": {"title": title, "start_date": start_date, "end_date": end_date}}
+    if undo == "task" and None not in (title, start_date):
+        return {"label": f'task "{title}"', "action": "/calendar/tasks/restore", "fields": {"title": title, "task_date": start_date}}
     if undo == "bookmark" and None not in (category, name, url):
         return {"label": f'bookmark "{name}"', "action": "/bookmarks/restore", "fields": {"category": category, "name": name, "url": url}}
     return None
@@ -153,6 +155,7 @@ def bookmarks_page(
     birthdays = db.list_birthdays(conn, username)
     vacations = db.list_vacations(conn, username)
     holidays = db.list_holidays(conn, username)
+    tasks = db.list_tasks(conn, username)
     shift_start = db.get_work_shift_start(conn, username)
     return render(
         request,
@@ -161,11 +164,12 @@ def bookmarks_page(
         bookmarks_by_category=db.list_bookmarks_grouped_by_category(conn, username),
         categories=db.list_categories(conn, username),
         calendar_months=calendar_service.build_calendar_months(
-            date.today(), NUM_CALENDAR_MONTHS, birthdays, vacations, shift_start, holidays
+            date.today(), NUM_CALENDAR_MONTHS, birthdays, vacations, shift_start, holidays, tasks
         ),
         birthdays=birthdays,
         vacations=vacations,
         holidays=holidays,
+        tasks=tasks,
         shift_start=shift_start,
         open_manage=bool(open_manage),
         open_bookmarks=bool(open_bookmarks),
@@ -236,6 +240,38 @@ def restore_holiday(request: Request, title: str = Form(...), month: int = Form(
     if not username:
         return RedirectResponse("/", status_code=303)
     db.create_holiday(conn, username, title, month, day)
+    return _redirect_to_bookmarks(open_manage=1, fragment="calendar-settings")
+
+
+@app.post("/calendar/tasks")
+def add_task(request: Request, title: str = Form(...), task_date: str = Form(...), conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    db.create_task(conn, username, title, task_date)
+    return _redirect_to_bookmarks(open_manage=1, fragment="calendar-settings")
+
+
+@app.post("/calendar/tasks/{task_id}/delete")
+def delete_task(request: Request, task_id: int, conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    row = db.get_task(conn, username, task_id)
+    if row is None:
+        return _redirect_to_bookmarks(open_manage=1, fragment="calendar-settings")
+    db.delete_task(conn, username, task_id)
+    return _redirect_to_bookmarks(
+        open_manage=1, undo="task", title=row["title"], start_date=row["task_date"], fragment="calendar-settings"
+    )
+
+
+@app.post("/calendar/tasks/restore")
+def restore_task(request: Request, title: str = Form(...), task_date: str = Form(...), conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    db.create_task(conn, username, title, task_date)
     return _redirect_to_bookmarks(open_manage=1, fragment="calendar-settings")
 
 

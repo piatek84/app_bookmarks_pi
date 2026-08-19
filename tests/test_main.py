@@ -16,7 +16,7 @@ from starlette.testclient import TestClient
 
 from bookmarks_pi import db, main
 
-TABLES = ["users", "login_codes", "bookmarks", "birthdays", "vacations", "holidays", "work_shifts", "category_order"]
+TABLES = ["users", "login_codes", "bookmarks", "birthdays", "vacations", "holidays", "tasks", "work_shifts", "category_order"]
 
 
 @pytest.fixture
@@ -164,6 +164,34 @@ def test_manage_panel_stays_open_after_adding_a_holiday(client):
     r = client.post("/calendar/holidays", data={"title": "Andalucía", "day": "28", "month": "2"})
     assert r.status_code == 200
     assert 'id="calendar-settings" open' in r.text
+
+
+def test_adding_a_task_shows_it_in_the_manage_panel(client):
+    r = client.post("/calendar/tasks", data={"title": "Buy groceries", "task_date": "2026-09-01"})
+    assert r.status_code == 200
+    assert 'id="calendar-settings" open' in r.text
+    assert "2026-09-01 - Buy groceries" in r.text
+
+
+def test_deleting_a_task_shows_undo_toast_and_restores_it(client):
+    client.post("/calendar/tasks", data={"title": "Buy groceries", "task_date": "2026-09-01"})
+    conn = db.open_connection(main.settings.database_path)
+    task_id = db.list_tasks(conn, "juan")[0]["id"]
+    conn.close()
+
+    r = client.post(f"/calendar/tasks/{task_id}/delete")
+    assert r.status_code == 200
+
+    conn = db.open_connection(main.settings.database_path)
+    assert db.list_tasks(conn, "juan") == []
+    conn.close()
+
+    assert "Undo" in r.text
+    assert 'action="/calendar/tasks/restore"' in r.text
+    assert 'id="calendar-settings" open' in r.text
+
+    r = client.post("/calendar/tasks/restore", data={"title": "Buy groceries", "task_date": "2026-09-01"})
+    assert "2026-09-01 - Buy groceries" in r.text
 
 
 def test_bookmark_list_truncates_to_five_with_show_more(client):

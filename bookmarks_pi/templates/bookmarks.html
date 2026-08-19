@@ -97,8 +97,8 @@
               {% else %}
               <span
                 class="day{% if day.is_past %} past-day{% endif %}{% if day.is_today %} current-day{% endif %}{% if day.birthday_title %} birthday-day{% endif %}{% if day.holiday_title %} holiday-day{% endif %}{% if day.vacation_title %} vacation-day{% endif %}{% if day.is_rest_day %} rest-day{% endif %}"
-                {% if day.birthday_title %}title="{{ day.birthday_title }}"{% elif day.holiday_title %}title="{{ day.holiday_title }}"{% elif day.vacation_title %}title="{{ day.vacation_title }}"{% endif %}
-              >{{ day.day }}</span>
+                {% if day.hint %}title="{{ day.hint }}"{% endif %}
+              >{{ day.day }}{% if day.task_title %}<span class="task-marker">*</span>{% endif %}</span>
               {% endif %}
             {% endfor %}
           {% endfor %}
@@ -113,6 +113,7 @@
       <span class="legend-item"><span class="legend-swatch vacation-day"></span>Vacation</span>
       <span class="legend-item"><span class="legend-swatch rest-day"></span>Rest day</span>
       <span class="legend-item"><span class="legend-swatch current-day"></span>Today</span>
+      <span class="legend-item"><span class="legend-asterisk">*</span>Task</span>
     </div>
 
     <details class="calendar-settings" id="calendar-settings" {% if open_manage %}open{% endif %}>
@@ -199,6 +200,27 @@
         </div>
 
         <div class="manage-card">
+          <h2>Tasks</h2>
+          <form class="calendar-form" method="post" action="/calendar/tasks">
+            <input placeholder="Task" name="title" required />
+            <input name="task_date" type="date" required />
+            <button type="submit">Add</button>
+          </form>
+          <ul class="calendar-list">
+            {% for t in tasks %}
+            <li>
+              <span>{{ t['task_date'] }} - {{ t['title'] }}</span>
+              <form method="post" action="/calendar/tasks/{{ t['id'] }}/delete">
+                <button type="submit" class="delete-btn" aria-label="Delete {{ t['title'] }}">&times;</button>
+              </form>
+            </li>
+            {% else %}
+            <li class="empty">No tasks yet.</li>
+            {% endfor %}
+          </ul>
+        </div>
+
+        <div class="manage-card">
           <h2>Work shift</h2>
           <p class="hint">Automatic cycle of 6 work days followed by 3 rest days, computed from the cycle start date.</p>
           <form class="calendar-form" method="post" action="/calendar/shift">
@@ -261,6 +283,7 @@
           {{ bookmark_item(bookmark) }}
           {% endfor %}
         </ul>
+        <button type="button" class="bookmark-less-btn">Show less</button>
       </details>
       {% endif %}
     </section>

@@ -188,6 +188,15 @@
       });
   }
 
+  // The native <summary> only opens/closes the list from the top; this button
+  // sits after the last bookmark so collapsing doesn't require scrolling back up.
+  document.addEventListener("click", function (event) {
+    var btn = event.target.closest(".bookmark-less-btn");
+    if (!btn) return;
+    var details = btn.closest("details.bookmark-more");
+    if (details) details.open = false;
+  });
+
   document.addEventListener("submit", function (event) {
     var form = event.target;
     if (!form.closest(".bookmark-groups")) return;

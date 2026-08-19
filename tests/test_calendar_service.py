@@ -53,3 +53,22 @@ def test_past_days_are_not_marked():
     assert past_day["is_past"] is True
     assert past_day["birthday_title"] is None
     assert past_day["is_rest_day"] is False
+
+
+def test_task_is_marked_on_its_specific_date():
+    tasks = [{"task_date": "2026-01-20", "title": "Buy groceries"}]
+    months = calendar_service.build_calendar_months(date(2026, 1, 15), 1, [], [], None, tasks=tasks)
+    assert _find_day(months, 20)["task_title"] == "Buy groceries"
+    assert _find_day(months, 10)["task_title"] is None
+
+
+def test_hint_combines_every_event_on_the_day():
+    birthdays = [{"month": 1, "day": 20, "title": "Alex"}]
+    holidays = [{"month": 1, "day": 20, "title": "Andalucía"}]
+    tasks = [{"task_date": "2026-01-20", "title": "Buy groceries"}]
+    months = calendar_service.build_calendar_months(date(2026, 1, 15), 1, birthdays, [], None, holidays, tasks)
+    hint = _find_day(months, 20)["hint"]
+    assert "Birthday: Alex" in hint
+    assert "Holiday: Andalucía" in hint
+    assert "Task: Buy groceries" in hint
+    assert _find_day(months, 10)["hint"] is None

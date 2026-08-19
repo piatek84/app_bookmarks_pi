@@ -29,9 +29,11 @@ def build_calendar_months(
     vacations,
     shift_start: Optional[str],
     holidays=(),
+    tasks=(),
 ) -> list[dict]:
     birthday_lookup = {(b["month"], b["day"]): b["title"] for b in birthdays}
     holiday_lookup = {(h["month"], h["day"]): h["title"] for h in holidays}
+    task_lookup = {date.fromisoformat(t["task_date"]): t["title"] for t in tasks}
     vacation_ranges = [
         (date.fromisoformat(v["start_date"]), date.fromisoformat(v["end_date"]), v["title"])
         for v in vacations
@@ -49,6 +51,7 @@ def build_calendar_months(
                 holiday_lookup,
                 vacation_ranges,
                 shift_start_date,
+                task_lookup,
             )
         )
     return months
@@ -61,6 +64,7 @@ def _build_month(
     holiday_lookup,
     vacation_ranges,
     shift_start: Optional[date],
+    task_lookup,
 ) -> dict:
     days_in_month = stdlib_calendar.monthrange(first_day.year, first_day.month)[1]
     weeks: list[list[Optional[dict]]] = []
@@ -71,6 +75,7 @@ def _build_month(
         is_future_or_today = current >= today
         birthday_title = birthday_lookup.get((current.month, current.day)) if is_future_or_today else None
         holiday_title = holiday_lookup.get((current.month, current.day)) if is_future_or_today else None
+        task_title = task_lookup.get(current) if is_future_or_today else None
         vacation_title = None
         if is_future_or_today:
             for start, end, title in vacation_ranges:
@@ -81,6 +86,18 @@ def _build_month(
             is_future_or_today and shift_start is not None and _is_rest_day(current, shift_start)
         )
 
+        hint_parts = []
+        if birthday_title:
+            hint_parts.append(f"Birthday: {birthday_title}")
+        if holiday_title:
+            hint_parts.append(f"Holiday: {holiday_title}")
+        if vacation_title:
+            hint_parts.append(f"Vacation: {vacation_title}")
+        if is_rest_day:
+            hint_parts.append("Rest day")
+        if task_title:
+            hint_parts.append(f"Task: {task_title}")
+
         week.append(
             {
                 "day": day_num,
@@ -90,6 +107,8 @@ def _build_month(
                 "holiday_title": holiday_title,
                 "vacation_title": vacation_title,
                 "is_rest_day": is_rest_day,
+                "task_title": task_title,
+                "hint": "\n".join(hint_parts) if hint_parts else None,
             }
         )
         if len(week) == 7:

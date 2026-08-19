@@ -9,6 +9,7 @@
   --vacation: #8ecae6;
   --rest: #c9b6e4;
   --holiday: #ff6b6b;
+  --task: #f4d35e;
 }
 
 html[data-theme="light"] {
@@ -81,7 +82,6 @@ h2 {
 
 .page {
   width: min(1120px, 100%);
-  padding-top: 2.75rem;
 }
 
 label {
@@ -182,6 +182,7 @@ button:hover {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1rem;
+  margin-top: 1rem;
 }
 
 .bookmark-group-header {
@@ -244,8 +245,8 @@ button:hover {
   transition: transform 0.15s ease;
 }
 
-.bookmark-more[open] summary::before {
-  transform: rotate(90deg);
+.bookmark-more[open] summary {
+  display: none;
 }
 
 .bookmark-more summary:hover {
@@ -254,6 +255,29 @@ button:hover {
 
 .bookmark-more .bookmark-list {
   margin-top: 0.5rem;
+}
+
+.bookmark-less-btn {
+  display: none;
+  margin-top: 0.5rem;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: inherit;
+  font-size: 0.75rem;
+  padding: 0;
+  cursor: pointer;
+}
+
+.bookmark-less-btn:hover {
+  color: var(--fg);
+  opacity: 1;
+}
+
+.bookmark-more[open] .bookmark-less-btn {
+  display: inline-block;
 }
 
 .bookmark-actions {
@@ -505,20 +529,20 @@ button:hover {
 }
 
 .holiday-day {
-  background: color-mix(in srgb, var(--holiday) 30%, transparent);
-  box-shadow: inset 0 -2px 0 var(--holiday);
   color: var(--holiday);
-  font-weight: 600;
 }
 
 .birthday-day::after {
-  content: "";
+  content: "🎉";
   position: absolute;
-  bottom: 2px;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--birthday);
+  bottom: -1px;
+  font-size: 0.5rem;
+  line-height: 1;
+}
+
+.task-marker {
+  color: var(--task);
+  font-weight: 700;
 }
 
 .calendar-legend {
@@ -546,9 +570,15 @@ button:hover {
 }
 
 .legend-swatch.birthday-day {
-  background: var(--birthday);
-  border-color: var(--birthday);
-  border-radius: 50%;
+  width: auto;
+  height: auto;
+  background: transparent;
+  border: none;
+  font-size: 0.9rem;
+}
+
+.legend-swatch.birthday-day::before {
+  content: "🎉";
 }
 
 .legend-swatch.holiday-day {
@@ -571,6 +601,13 @@ button:hover {
 .legend-swatch.current-day {
   background: transparent;
   border-color: var(--fg);
+}
+
+.legend-asterisk {
+  color: var(--task);
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .calendar-settings {

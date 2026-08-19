@@ -71,6 +71,15 @@ CREATE TABLE IF NOT EXISTS holidays (
 );
 CREATE INDEX IF NOT EXISTS idx_holidays_owner ON holidays (owner_username);
 
+CREATE TABLE IF NOT EXISTS tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    owner_username TEXT NOT NULL,
+    title TEXT NOT NULL,
+    task_date TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_tasks_owner ON tasks (owner_username);
+
 CREATE TABLE IF NOT EXISTS category_order (
     owner_username TEXT NOT NULL,
     category TEXT NOT NULL,
@@ -441,6 +450,38 @@ def delete_holiday(conn: sqlite3.Connection, owner_username: str, holiday_id: in
     cursor = conn.execute(
         "DELETE FROM holidays WHERE id = ? AND owner_username = ?",
         (holiday_id, owner_username),
+    )
+    conn.commit()
+    return cursor.rowcount > 0
+
+
+def create_task(conn: sqlite3.Connection, owner_username: str, title: str, task_date: str) -> sqlite3.Row:
+    cursor = conn.execute(
+        "INSERT INTO tasks (owner_username, title, task_date, created_at) VALUES (?, ?, ?, ?)",
+        (owner_username, title, task_date, _now()),
+    )
+    conn.commit()
+    return conn.execute("SELECT * FROM tasks WHERE id = ?", (cursor.lastrowid,)).fetchone()
+
+
+def list_tasks(conn: sqlite3.Connection, owner_username: str) -> list[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM tasks WHERE owner_username = ? ORDER BY task_date",
+        (owner_username,),
+    ).fetchall()
+
+
+def get_task(conn: sqlite3.Connection, owner_username: str, task_id: int) -> Optional[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM tasks WHERE id = ? AND owner_username = ?",
+        (task_id, owner_username),
+    ).fetchone()
+
+
+def delete_task(conn: sqlite3.Connection, owner_username: str, task_id: int) -> bool:
+    cursor = conn.execute(
+        "DELETE FROM tasks WHERE id = ? AND owner_username = ?",
+        (task_id, owner_username),
     )
     conn.commit()
     return cursor.rowcount > 0
