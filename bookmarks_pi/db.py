@@ -233,6 +233,19 @@ def get_bookmark(conn: sqlite3.Connection, owner_username: str, bookmark_id: int
     ).fetchone()
 
 
+def update_bookmark(
+    conn: sqlite3.Connection, owner_username: str, bookmark_id: int, category: str, name: str, url: str
+) -> bool:
+    cursor = conn.execute(
+        "UPDATE bookmarks SET category = ?, name = ?, url = ? WHERE id = ? AND owner_username = ?",
+        (category, name, url, bookmark_id, owner_username),
+    )
+    if cursor.rowcount > 0:
+        _ensure_category_position(conn, owner_username, category)
+    conn.commit()
+    return cursor.rowcount > 0
+
+
 def delete_bookmark(conn: sqlite3.Connection, owner_username: str, bookmark_id: int) -> bool:
     cursor = conn.execute(
         "DELETE FROM bookmarks WHERE id = ? AND owner_username = ?",

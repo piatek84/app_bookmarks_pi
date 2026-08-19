@@ -1,6 +1,7 @@
 """FastAPI app: passwordless login via Telegram + bookmark CRUD, one process,
 one SQLite file. No JS -- forms post back to the server and pages re-render.
 """
+import re
 import sqlite3
 import urllib.parse
 from datetime import date
@@ -26,6 +27,13 @@ jinja_env = Environment(
     loader=FileSystemLoader(BASE_DIR / "templates"),
     autoescape=select_autoescape(["html"]),
 )
+
+
+def slugify(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", text.strip().lower()).strip("-") or "category"
+
+
+jinja_env.filters["slugify"] = slugify
 
 app = FastAPI(title="bookmarks-pi")
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
@@ -53,10 +61,12 @@ def _current_theme(request: Request) -> str:
     return request.session.get("theme", "dark")
 
 
-def _redirect_to_bookmarks(**params) -> RedirectResponse:
+def _redirect_to_bookmarks(fragment: Optional[str] = None, **params) -> RedirectResponse:
     clean = {k: v for k, v in params.items() if v is not None}
     query = urllib.parse.urlencode(clean)
     url = "/bookmarks" + (f"?{query}" if query else "")
+    if fragment:
+        url += f"#{fragment}"
     return RedirectResponse(url, status_code=303)
 
 
@@ -125,6 +135,7 @@ def bookmarks_page(
     request: Request,
     conn=Depends(get_db),
     open_manage: Optional[str] = None,
+    open_bookmarks: Optional[str] = None,
     undo: Optional[str] = None,
     title: Optional[str] = None,
     month: Optional[int] = None,
@@ -156,6 +167,7 @@ def bookmarks_page(
         holidays=holidays,
         shift_start=shift_start,
         open_manage=bool(open_manage),
+        open_bookmarks=bool(open_bookmarks),
         undo=_build_undo_context(undo, title, month, day, start_date, end_date, category, name, url),
         error=None,
     )
@@ -167,7 +179,7 @@ def add_birthday(request: Request, title: str = Form(...), day: int = Form(...),
     if not username:
         return RedirectResponse("/", status_code=303)
     db.create_birthday(conn, username, title, month, day)
-    return _redirect_to_bookmarks(open_manage=1)
+    return _redirect_to_bookmarks(open_manage=1, fragment="calendar-settings")
 
 
 @app.post("/calendar/birthdays/{birthday_id}/delete")
@@ -177,9 +189,11 @@ def delete_birthday(request: Request, birthday_id: int, conn=Depends(get_db)):
         return RedirectResponse("/", status_code=303)
     row = db.get_birthday(conn, username, birthday_id)
     if row is None:
-        return _redirect_to_bookmarks(open_manage=1)
+        return _redirect_to_bookmarks(open_manage=1, fragment="calendar-settings")
     db.delete_birthday(conn, username, birthday_id)
-    return _redirect_to_bookmarks(open_manage=1, undo="birthday", title=row["title"], month=row["month"], day=row["day"])
+    return _redirect_to_bookmarks(
+        open_manage=1, undo="birthday", title=row["title"], month=row["month"], day=row["day"], fragment="calendar-settings"
+    )
 
 
 @app.post("/calendar/birthdays/restore")
@@ -188,7 +202,7 @@ def restore_birthday(request: Request, title: str = Form(...), month: int = Form
     if not username:
         return RedirectResponse("/", status_code=303)
     db.create_birthday(conn, username, title, month, day)
-    return _redirect_to_bookmarks(open_manage=1)
+    return _redirect_to_bookmarks(open_manage=1, fragment="calendar-settings")
 
 
 @app.post("/calendar/holidays")
@@ -197,7 +211,7 @@ def add_holiday(request: Request, title: str = Form(...), day: int = Form(...), 
     if not username:
         return RedirectResponse("/", status_code=303)
     db.create_holiday(conn, username, title, month, day)
-    return _redirect_to_bookmarks(open_manage=1)
+    return _redirect_to_bookmarks(open_manage=1, fragment="calendar-settings")
 
 
 @app.post("/calendar/holidays/{holiday_id}/delete")
@@ -207,9 +221,11 @@ def delete_holiday(request: Request, holiday_id: int, conn=Depends(get_db)):
         return RedirectResponse("/", status_code=303)
     row = db.get_holiday(conn, username, holiday_id)
     if row is None:
-        return _redirect_to_bookmarks(open_manage=1)
+        return _redirect_to_bookmarks(open_manage=1, fragment="calendar-settings")
     db.delete_holiday(conn, username, holiday_id)
-    return _redirect_to_bookmarks(open_manage=1, undo="holiday", title=row["title"], month=row["month"], day=row["day"])
+    return _redirect_to_bookmarks(
+        open_manage=1, undo="holiday", title=row["title"], month=row["month"], day=row["day"], fragment="calendar-settings"
+    )
 
 
 @app.post("/calendar/holidays/restore")
@@ -218,7 +234,7 @@ def restore_holiday(request: Request, title: str = Form(...), month: int = Form(
     if not username:
         return RedirectResponse("/", status_code=303)
     db.create_holiday(conn, username, title, month, day)
-    return _redirect_to_bookmarks(open_manage=1)
+    return _redirect_to_bookmarks(open_manage=1, fragment="calendar-settings")
 
 
 @app.post("/calendar/vacations")
@@ -233,7 +249,7 @@ def add_vacation(
     if not username:
         return RedirectResponse("/", status_code=303)
     db.create_vacation(conn, username, title, start_date, end_date)
-    return _redirect_to_bookmarks(open_manage=1)
+    return _redirect_to_bookmarks(open_manage=1, fragment="calendar-settings")
 
 
 @app.post("/calendar/vacations/{vacation_id}/delete")
@@ -243,10 +259,15 @@ def delete_vacation(request: Request, vacation_id: int, conn=Depends(get_db)):
         return RedirectResponse("/", status_code=303)
     row = db.get_vacation(conn, username, vacation_id)
     if row is None:
-        return _redirect_to_bookmarks(open_manage=1)
+        return _redirect_to_bookmarks(open_manage=1, fragment="calendar-settings")
     db.delete_vacation(conn, username, vacation_id)
     return _redirect_to_bookmarks(
-        open_manage=1, undo="vacation", title=row["title"], start_date=row["start_date"], end_date=row["end_date"]
+        open_manage=1,
+        undo="vacation",
+        title=row["title"],
+        start_date=row["start_date"],
+        end_date=row["end_date"],
+        fragment="calendar-settings",
     )
 
 
@@ -262,7 +283,7 @@ def restore_vacation(
     if not username:
         return RedirectResponse("/", status_code=303)
     db.create_vacation(conn, username, title, start_date, end_date)
-    return _redirect_to_bookmarks(open_manage=1)
+    return _redirect_to_bookmarks(open_manage=1, fragment="calendar-settings")
 
 
 @app.post("/calendar/shift")
@@ -271,7 +292,7 @@ def set_shift(request: Request, start_date: str = Form(...), conn=Depends(get_db
     if not username:
         return RedirectResponse("/", status_code=303)
     db.set_work_shift_start(conn, username, start_date)
-    return _redirect_to_bookmarks(open_manage=1)
+    return _redirect_to_bookmarks(open_manage=1, fragment="calendar-settings")
 
 
 @app.post("/bookmarks")
@@ -286,7 +307,23 @@ def add_bookmark(
     if not username:
         return RedirectResponse("/", status_code=303)
     db.create_bookmark(conn, username, category, name, url)
-    return _redirect_to_bookmarks()
+    return _redirect_to_bookmarks(open_bookmarks=1, fragment="bookmarks-settings")
+
+
+@app.post("/bookmarks/{bookmark_id}/edit")
+def edit_bookmark(
+    request: Request,
+    bookmark_id: int,
+    category: str = Form(...),
+    name: str = Form(...),
+    url: str = Form(...),
+    conn=Depends(get_db),
+):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    db.update_bookmark(conn, username, bookmark_id, category, name, url)
+    return _redirect_to_bookmarks(fragment=f"category-{slugify(category)}")
 
 
 @app.post("/bookmarks/{bookmark_id}/delete")
@@ -298,7 +335,9 @@ def delete_bookmark(request: Request, bookmark_id: int, conn=Depends(get_db)):
     if row is None:
         return _redirect_to_bookmarks()
     db.delete_bookmark(conn, username, bookmark_id)
-    return _redirect_to_bookmarks(undo="bookmark", category=row["category"], name=row["name"], url=row["url"])
+    return _redirect_to_bookmarks(
+        undo="bookmark", category=row["category"], name=row["name"], url=row["url"], fragment=f"category-{slugify(row['category'])}"
+    )
 
 
 @app.post("/bookmarks/restore")
@@ -307,7 +346,7 @@ def restore_bookmark(request: Request, category: str = Form(...), name: str = Fo
     if not username:
         return RedirectResponse("/", status_code=303)
     db.create_bookmark(conn, username, category, name, url)
-    return _redirect_to_bookmarks()
+    return _redirect_to_bookmarks(fragment=f"category-{slugify(category)}")
 
 
 @app.post("/bookmarks/categories/move")
@@ -316,4 +355,4 @@ def move_category(request: Request, category: str = Form(...), direction: str = 
     if not username:
         return RedirectResponse("/", status_code=303)
     db.move_category(conn, username, category, -1 if direction == "up" else 1)
-    return _redirect_to_bookmarks()
+    return _redirect_to_bookmarks(fragment=f"category-{slugify(category)}")

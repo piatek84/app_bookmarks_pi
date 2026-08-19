@@ -247,6 +247,13 @@ button:hover {
   margin-top: 0.5rem;
 }
 
+.bookmark-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.edit-btn,
 .delete-btn {
   background: transparent;
   border: 1px solid var(--border);
@@ -254,19 +261,133 @@ button:hover {
   padding: 0.1rem 0.5rem;
   border-radius: 4px;
   line-height: 1.2;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
 }
 
+.edit-btn:hover,
 .delete-btn:hover {
   color: var(--fg);
   border-color: var(--fg);
   opacity: 1;
 }
 
-.logout {
-  font-size: 0.8rem;
+.edit-icon {
+  display: inline-block;
+  font-size: 0.65rem;
+  transform: scaleX(-1);
+}
+
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  padding: 1.5rem;
+}
+
+.modal-overlay:target {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.modal {
+  position: relative;
+  z-index: 1;
+  width: min(360px, 100%);
+  padding: 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.modal h2 {
+  margin: 0;
+}
+
+.modal form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.cancel-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.55rem 0.9rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
   color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  text-decoration: none;
+  font-size: 0.8rem;
+}
+
+.cancel-btn:hover {
+  color: var(--fg);
+  border-color: var(--fg);
+}
+
+.icon-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.icon-buttons form {
+  margin: 0;
+  display: contents;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  text-decoration: none;
+  font: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.icon-btn:hover {
+  border-color: var(--fg);
+  opacity: 0.85;
+}
+
+.icon-sun {
+  color: var(--birthday);
+}
+
+.icon-moon {
+  color: var(--vacation);
+}
+
+.logout-icon-btn {
+  color: var(--holiday);
 }
 
 .toast {

@@ -78,6 +78,28 @@ def test_delete_bookmark_scoped_per_owner(conn):
     assert len(db.list_bookmarks(conn, "juan")) == 1
 
 
+def test_update_bookmark(conn):
+    bookmark = db.create_bookmark(conn, "juan", "reading", "Blog", "https://blog.dev")
+    assert db.update_bookmark(conn, "juan", bookmark["id"], "tools", "New name", "https://new.dev") is True
+
+    updated = db.get_bookmark(conn, "juan", bookmark["id"])
+    assert updated["category"] == "tools"
+    assert updated["name"] == "New name"
+    assert updated["url"] == "https://new.dev"
+
+
+def test_update_bookmark_registers_new_category_position(conn):
+    bookmark = db.create_bookmark(conn, "juan", "reading", "Blog", "https://blog.dev")
+    db.update_bookmark(conn, "juan", bookmark["id"], "brand-new-category", "Blog", "https://blog.dev")
+    assert "brand-new-category" in db.list_bookmarks_grouped_by_category(conn, "juan")
+
+
+def test_update_bookmark_scoped_per_owner(conn):
+    bookmark = db.create_bookmark(conn, "juan", "reading", "Blog", "https://blog.dev")
+    assert db.update_bookmark(conn, "other", bookmark["id"], "tools", "Hacked", "https://evil.dev") is False
+    assert db.get_bookmark(conn, "juan", bookmark["id"])["name"] == "Blog"
+
+
 def test_list_bookmarks_grouped_by_category(conn):
     db.create_bookmark(conn, "juan", "reading", "Blog", "https://blog.dev")
     db.create_bookmark(conn, "juan", "reading", "Feed", "https://feed.dev")

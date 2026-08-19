@@ -3,14 +3,69 @@
 {% macro bookmark_item(bookmark) %}
 <li>
   <a href="{{ bookmark['url'] }}" target="_blank" rel="noreferrer">{{ bookmark['name'] }}</a>
-  <form method="post" action="/bookmarks/{{ bookmark['id'] }}/delete">
-    <button type="submit" class="delete-btn" aria-label="Delete {{ bookmark['name'] }}">&times;</button>
-  </form>
+  <span class="bookmark-actions">
+    <a href="#edit-bookmark-{{ bookmark['id'] }}" class="edit-btn" aria-label="Edit {{ bookmark['name'] }}"><span class="edit-icon">&#9998;</span></a>
+    <form method="post" action="/bookmarks/{{ bookmark['id'] }}/delete">
+      <button type="submit" class="delete-btn" aria-label="Delete {{ bookmark['name'] }}">&times;</button>
+    </form>
+  </span>
+  <div id="edit-bookmark-{{ bookmark['id'] }}" class="modal-overlay">
+    <a href="#" class="modal-backdrop" aria-label="Close"></a>
+    <div class="modal">
+      <h2>Edit bookmark</h2>
+      <form method="post" action="/bookmarks/{{ bookmark['id'] }}/edit">
+        <input name="category" value="{{ bookmark['category'] }}" list="category-options" required />
+        <input name="name" value="{{ bookmark['name'] }}" required />
+        <input name="url" type="url" value="{{ bookmark['url'] }}" required />
+        <div class="modal-actions">
+          <a href="#" class="cancel-btn">Cancel</a>
+          <button type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </li>
 {% endmacro %}
+{% block theme_toggle %}{% endblock %}
 {% block content %}
 <div class="page">
-  <h1>{{ username }}&apos;s bookmarks <a class="logout" href="/logout">Log out</a></h1>
+  <h1>
+    {{ username }}&apos;s bookmarks
+    <span class="icon-buttons">
+      <form method="post" action="/theme">
+        <button
+          type="submit"
+          class="icon-btn theme-icon-btn"
+          aria-label="{{ 'Switch to light mode' if theme == 'dark' else 'Switch to dark mode' }}"
+        >
+          {% if theme == 'dark' %}
+          <svg class="icon-sun" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="4" />
+            <line x1="12" y1="2" x2="12" y2="4" />
+            <line x1="12" y1="20" x2="12" y2="22" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="2" y1="12" x2="4" y2="12" />
+            <line x1="20" y1="12" x2="22" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+          </svg>
+          {% else %}
+          <svg class="icon-moon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg>
+          {% endif %}
+        </button>
+      </form>
+      <a class="icon-btn logout-icon-btn" href="/logout" aria-label="Log out">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+          <polyline points="16 17 21 12 16 7" />
+          <line x1="21" y1="12" x2="9" y2="12" />
+        </svg>
+      </a>
+    </span>
+  </h1>
 
   {% if undo %}
   <div class="toast">
@@ -60,7 +115,7 @@
       <span class="legend-item"><span class="legend-swatch current-day"></span>Today</span>
     </div>
 
-    <details class="calendar-settings" {% if open_manage %}open{% endif %}>
+    <details class="calendar-settings" id="calendar-settings" {% if open_manage %}open{% endif %}>
       <summary>Manage calendar</summary>
       <div class="calendar-manage">
         <div class="manage-card">
@@ -158,23 +213,26 @@
     </details>
   </section>
 
-  <form class="bookmark-form" method="post" action="/bookmarks">
-    <input placeholder="Category" name="category" list="category-options" required />
-    <datalist id="category-options">
-      {% for c in categories %}
-      <option value="{{ c }}"></option>
-      {% endfor %}
-    </datalist>
-    <input placeholder="Name" name="name" required />
-    <input placeholder="https://..." name="url" type="url" required />
-    <button type="submit">Add bookmark</button>
-  </form>
+  <details class="calendar-settings" id="bookmarks-settings" {% if open_bookmarks %}open{% endif %}>
+    <summary>Manage bookmarks</summary>
+    <form class="bookmark-form" method="post" action="/bookmarks">
+      <input placeholder="Category" name="category" list="category-options" required />
+      <datalist id="category-options">
+        {% for c in categories %}
+        <option value="{{ c }}"></option>
+        {% endfor %}
+      </datalist>
+      <input placeholder="Name" name="name" required />
+      <input placeholder="https://..." name="url" type="url" required />
+      <button type="submit">Add bookmark</button>
+    </form>
+  </details>
 
   {% if error %}<p class="error">{{ error }}</p>{% endif %}
 
   <div class="bookmark-groups">
     {% for category, items in bookmarks_by_category.items() %}
-    <section class="bookmark-group">
+    <section class="bookmark-group" id="category-{{ category|slugify }}">
       <div class="bookmark-group-header">
         <h2>{{ category }}</h2>
         <div class="category-reorder">

@@ -10,9 +10,11 @@
   <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
+  {% block theme_toggle %}
   <form class="theme-toggle" method="post" action="/theme">
     <button type="submit">{{ 'Light mode' if theme == 'dark' else 'Dark mode' }}</button>
   </form>
+  {% endblock %}
   {% block content %}{% endblock %}
 </body>
 </html>
