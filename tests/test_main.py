@@ -97,6 +97,25 @@ def test_manage_panel_stays_open_after_adding_a_holiday(client):
     assert 'class="calendar-settings" open' in r.text
 
 
+def test_bookmark_list_truncates_to_five_with_show_more(client):
+    for i in range(7):
+        client.post("/bookmarks", data={"category": "apps", "name": f"Link {i}", "url": f"https://{i}.dev"})
+
+    r = client.get("/bookmarks")
+    assert r.text.count("Delete Link") == 7  # all rendered, just some inside <details>
+    assert "Show 2 more" in r.text
+    assert 'class="bookmark-more"' in r.text
+
+
+def test_bookmark_list_has_no_show_more_at_five_or_fewer(client):
+    for i in range(5):
+        client.post("/bookmarks", data={"category": "apps", "name": f"Link {i}", "url": f"https://{i}.dev"})
+
+    r = client.get("/bookmarks")
+    assert "Show" not in r.text
+    assert 'class="bookmark-more"' not in r.text
+
+
 def test_move_category_reorders_bookmark_sections(client):
     client.post("/bookmarks", data={"category": "apps", "name": "A", "url": "https://a.dev"})
     client.post("/bookmarks", data={"category": "sports", "name": "B", "url": "https://b.dev"})

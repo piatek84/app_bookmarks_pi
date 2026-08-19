@@ -212,6 +212,41 @@ button:hover {
   cursor: default;
 }
 
+.bookmark-more {
+  margin-top: 0.5rem;
+}
+
+.bookmark-more summary {
+  cursor: pointer;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.bookmark-more summary::-webkit-details-marker {
+  display: none;
+}
+
+.bookmark-more summary::before {
+  content: "▸";
+  transition: transform 0.15s ease;
+}
+
+.bookmark-more[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.bookmark-more summary:hover {
+  color: var(--fg);
+}
+
+.bookmark-more .bookmark-list {
+  margin-top: 0.5rem;
+}
+
 .delete-btn {
   background: transparent;
   border: 1px solid var(--border);

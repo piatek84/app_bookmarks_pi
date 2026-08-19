@@ -1,5 +1,13 @@
 {% extends "base.html" %}
 {% block title %}{{ username }}'s bookmarks{% endblock %}
+{% macro bookmark_item(bookmark) %}
+<li>
+  <a href="{{ bookmark['url'] }}" target="_blank" rel="noreferrer">{{ bookmark['name'] }}</a>
+  <form method="post" action="/bookmarks/{{ bookmark['id'] }}/delete">
+    <button type="submit" class="delete-btn" aria-label="Delete {{ bookmark['name'] }}">&times;</button>
+  </form>
+</li>
+{% endmacro %}
 {% block content %}
 <div class="page">
   <h1>{{ username }}&apos;s bookmarks <a class="logout" href="/logout">Log out</a></h1>
@@ -183,15 +191,20 @@
         </div>
       </div>
       <ul class="bookmark-list">
-        {% for bookmark in items %}
-        <li>
-          <a href="{{ bookmark['url'] }}" target="_blank" rel="noreferrer">{{ bookmark['name'] }}</a>
-          <form method="post" action="/bookmarks/{{ bookmark['id'] }}/delete">
-            <button type="submit" class="delete-btn" aria-label="Delete {{ bookmark['name'] }}">&times;</button>
-          </form>
-        </li>
+        {% for bookmark in items[:5] %}
+        {{ bookmark_item(bookmark) }}
         {% endfor %}
       </ul>
+      {% if items|length > 5 %}
+      <details class="bookmark-more">
+        <summary>Show {{ items|length - 5 }} more</summary>
+        <ul class="bookmark-list">
+          {% for bookmark in items[5:] %}
+          {{ bookmark_item(bookmark) }}
+          {% endfor %}
+        </ul>
+      </details>
+      {% endif %}
     </section>
     {% else %}
     <p class="empty">No bookmarks yet.</p>
