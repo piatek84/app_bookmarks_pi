@@ -6,4 +6,4 @@ data/
 *.db
 .pytest_cache/
 .DS_Store
-scripts/import_legacy_calendar.py
+scripts/import_legacy_data.py

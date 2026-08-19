@@ -8,6 +8,7 @@
   --birthday: #ffcb77;
   --vacation: #8ecae6;
   --rest: #c9b6e4;
+  --holiday: #ff6b6b;
 }
 
 html[data-theme="light"] {
@@ -201,6 +202,39 @@ button:hover {
   letter-spacing: 0.05em;
 }
 
+.toast {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.6rem 0.6rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  font-size: 0.8rem;
+  z-index: 10;
+  animation: toast-fade-out 12s forwards;
+}
+
+.toast button {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.7rem;
+}
+
+@keyframes toast-fade-out {
+  0%, 90% {
+    opacity: 1;
+    visibility: visible;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
 /* Calendar */
 
 .calendar-section {
@@ -273,6 +307,13 @@ button:hover {
   box-shadow: inset 0 -2px 0 var(--rest);
 }
 
+.holiday-day {
+  background: color-mix(in srgb, var(--holiday) 30%, transparent);
+  box-shadow: inset 0 -2px 0 var(--holiday);
+  color: var(--holiday);
+  font-weight: 600;
+}
+
 .birthday-day::after {
   content: "";
   position: absolute;
@@ -311,6 +352,12 @@ button:hover {
   background: var(--birthday);
   border-color: var(--birthday);
   border-radius: 50%;
+}
+
+.legend-swatch.holiday-day {
+  background: color-mix(in srgb, var(--holiday) 32%, transparent);
+  box-shadow: inset 0 -2px 0 var(--holiday);
+  border-color: transparent;
 }
 
 .legend-swatch.vacation-day {

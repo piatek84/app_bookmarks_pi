@@ -116,6 +116,31 @@ def test_vacations_crud_and_scoping(conn):
     assert db.list_vacations(conn, "juan") == []
 
 
+def test_holidays_crud_and_scoping(conn):
+    holiday = db.create_holiday(conn, "juan", "Andalucía", 2, 28)
+    assert holiday["month"] == 2
+    assert holiday["day"] == 28
+    assert [h["title"] for h in db.list_holidays(conn, "juan")] == ["Andalucía"]
+    assert db.list_holidays(conn, "other") == []
+    assert db.get_holiday(conn, "other", holiday["id"]) is None
+    assert db.delete_holiday(conn, "other", holiday["id"]) is False
+    assert db.delete_holiday(conn, "juan", holiday["id"]) is True
+    assert db.list_holidays(conn, "juan") == []
+
+
+def test_getters_for_undo_return_none_when_not_owner(conn):
+    bookmark = db.create_bookmark(conn, "juan", "reading", "Blog", "https://blog.dev")
+    birthday = db.create_birthday(conn, "juan", "Alex", 6, 1)
+    vacation = db.create_vacation(conn, "juan", "Trip", "2026-08-01", "2026-08-10")
+
+    assert db.get_bookmark(conn, "juan", bookmark["id"])["name"] == "Blog"
+    assert db.get_bookmark(conn, "other", bookmark["id"]) is None
+    assert db.get_birthday(conn, "juan", birthday["id"])["title"] == "Alex"
+    assert db.get_birthday(conn, "other", birthday["id"]) is None
+    assert db.get_vacation(conn, "juan", vacation["id"])["title"] == "Trip"
+    assert db.get_vacation(conn, "other", vacation["id"]) is None
+
+
 def test_work_shift_start_upsert_and_scoping(conn):
     assert db.get_work_shift_start(conn, "juan") is None
     db.set_work_shift_start(conn, "juan", "2026-01-01")

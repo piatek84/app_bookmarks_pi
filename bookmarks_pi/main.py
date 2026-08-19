@@ -2,6 +2,7 @@
 one SQLite file. No JS -- forms post back to the server and pages re-render.
 """
 import sqlite3
+import urllib.parse
 from datetime import date
 from pathlib import Path
 from typing import Iterator, Optional
@@ -52,6 +53,35 @@ def _current_theme(request: Request) -> str:
     return request.session.get("theme", "dark")
 
 
+def _redirect_to_bookmarks(**params) -> RedirectResponse:
+    clean = {k: v for k, v in params.items() if v is not None}
+    query = urllib.parse.urlencode(clean)
+    url = "/bookmarks" + (f"?{query}" if query else "")
+    return RedirectResponse(url, status_code=303)
+
+
+def _build_undo_context(
+    undo: Optional[str],
+    title: Optional[str],
+    month: Optional[int],
+    day: Optional[int],
+    start_date: Optional[str],
+    end_date: Optional[str],
+    category: Optional[str],
+    name: Optional[str],
+    url: Optional[str],
+) -> Optional[dict]:
+    if undo == "birthday" and None not in (title, month, day):
+        return {"label": f'birthday "{title}"', "action": "/calendar/birthdays/restore", "fields": {"title": title, "month": month, "day": day}}
+    if undo == "holiday" and None not in (title, month, day):
+        return {"label": f'holiday "{title}"', "action": "/calendar/holidays/restore", "fields": {"title": title, "month": month, "day": day}}
+    if undo == "vacation" and None not in (title, start_date, end_date):
+        return {"label": f'vacation "{title}"', "action": "/calendar/vacations/restore", "fields": {"title": title, "start_date": start_date, "end_date": end_date}}
+    if undo == "bookmark" and None not in (category, name, url):
+        return {"label": f'bookmark "{name}"', "action": "/bookmarks/restore", "fields": {"category": category, "name": name, "url": url}}
+    return None
+
+
 @app.get("/")
 def index(request: Request):
     if _current_username(request):
@@ -91,12 +121,26 @@ def toggle_theme(request: Request):
 
 
 @app.get("/bookmarks")
-def bookmarks_page(request: Request, conn=Depends(get_db)):
+def bookmarks_page(
+    request: Request,
+    conn=Depends(get_db),
+    open_manage: Optional[str] = None,
+    undo: Optional[str] = None,
+    title: Optional[str] = None,
+    month: Optional[int] = None,
+    day: Optional[int] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    category: Optional[str] = None,
+    name: Optional[str] = None,
+    url: Optional[str] = None,
+):
     username = _current_username(request)
     if not username:
         return RedirectResponse("/", status_code=303)
     birthdays = db.list_birthdays(conn, username)
     vacations = db.list_vacations(conn, username)
+    holidays = db.list_holidays(conn, username)
     shift_start = db.get_work_shift_start(conn, username)
     return render(
         request,
@@ -105,11 +149,14 @@ def bookmarks_page(request: Request, conn=Depends(get_db)):
         bookmarks_by_category=db.list_bookmarks_grouped_by_category(conn, username),
         categories=db.list_categories(conn, username),
         calendar_months=calendar_service.build_calendar_months(
-            date.today(), NUM_CALENDAR_MONTHS, birthdays, vacations, shift_start
+            date.today(), NUM_CALENDAR_MONTHS, birthdays, vacations, shift_start, holidays
         ),
         birthdays=birthdays,
         vacations=vacations,
+        holidays=holidays,
         shift_start=shift_start,
+        open_manage=bool(open_manage),
+        undo=_build_undo_context(undo, title, month, day, start_date, end_date, category, name, url),
         error=None,
     )
 
@@ -120,7 +167,7 @@ def add_birthday(request: Request, title: str = Form(...), day: int = Form(...),
     if not username:
         return RedirectResponse("/", status_code=303)
     db.create_birthday(conn, username, title, month, day)
-    return RedirectResponse("/bookmarks", status_code=303)
+    return _redirect_to_bookmarks(open_manage=1)
 
 
 @app.post("/calendar/birthdays/{birthday_id}/delete")
@@ -128,8 +175,50 @@ def delete_birthday(request: Request, birthday_id: int, conn=Depends(get_db)):
     username = _current_username(request)
     if not username:
         return RedirectResponse("/", status_code=303)
+    row = db.get_birthday(conn, username, birthday_id)
+    if row is None:
+        return _redirect_to_bookmarks(open_manage=1)
     db.delete_birthday(conn, username, birthday_id)
-    return RedirectResponse("/bookmarks", status_code=303)
+    return _redirect_to_bookmarks(open_manage=1, undo="birthday", title=row["title"], month=row["month"], day=row["day"])
+
+
+@app.post("/calendar/birthdays/restore")
+def restore_birthday(request: Request, title: str = Form(...), month: int = Form(...), day: int = Form(...), conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    db.create_birthday(conn, username, title, month, day)
+    return _redirect_to_bookmarks(open_manage=1)
+
+
+@app.post("/calendar/holidays")
+def add_holiday(request: Request, title: str = Form(...), day: int = Form(...), month: int = Form(...), conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    db.create_holiday(conn, username, title, month, day)
+    return _redirect_to_bookmarks(open_manage=1)
+
+
+@app.post("/calendar/holidays/{holiday_id}/delete")
+def delete_holiday(request: Request, holiday_id: int, conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    row = db.get_holiday(conn, username, holiday_id)
+    if row is None:
+        return _redirect_to_bookmarks(open_manage=1)
+    db.delete_holiday(conn, username, holiday_id)
+    return _redirect_to_bookmarks(open_manage=1, undo="holiday", title=row["title"], month=row["month"], day=row["day"])
+
+
+@app.post("/calendar/holidays/restore")
+def restore_holiday(request: Request, title: str = Form(...), month: int = Form(...), day: int = Form(...), conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    db.create_holiday(conn, username, title, month, day)
+    return _redirect_to_bookmarks(open_manage=1)
 
 
 @app.post("/calendar/vacations")
@@ -144,7 +233,7 @@ def add_vacation(
     if not username:
         return RedirectResponse("/", status_code=303)
     db.create_vacation(conn, username, title, start_date, end_date)
-    return RedirectResponse("/bookmarks", status_code=303)
+    return _redirect_to_bookmarks(open_manage=1)
 
 
 @app.post("/calendar/vacations/{vacation_id}/delete")
@@ -152,8 +241,28 @@ def delete_vacation(request: Request, vacation_id: int, conn=Depends(get_db)):
     username = _current_username(request)
     if not username:
         return RedirectResponse("/", status_code=303)
+    row = db.get_vacation(conn, username, vacation_id)
+    if row is None:
+        return _redirect_to_bookmarks(open_manage=1)
     db.delete_vacation(conn, username, vacation_id)
-    return RedirectResponse("/bookmarks", status_code=303)
+    return _redirect_to_bookmarks(
+        open_manage=1, undo="vacation", title=row["title"], start_date=row["start_date"], end_date=row["end_date"]
+    )
+
+
+@app.post("/calendar/vacations/restore")
+def restore_vacation(
+    request: Request,
+    title: str = Form(...),
+    start_date: str = Form(...),
+    end_date: str = Form(...),
+    conn=Depends(get_db),
+):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    db.create_vacation(conn, username, title, start_date, end_date)
+    return _redirect_to_bookmarks(open_manage=1)
 
 
 @app.post("/calendar/shift")
@@ -162,7 +271,7 @@ def set_shift(request: Request, start_date: str = Form(...), conn=Depends(get_db
     if not username:
         return RedirectResponse("/", status_code=303)
     db.set_work_shift_start(conn, username, start_date)
-    return RedirectResponse("/bookmarks", status_code=303)
+    return _redirect_to_bookmarks(open_manage=1)
 
 
 @app.post("/bookmarks")
@@ -177,7 +286,7 @@ def add_bookmark(
     if not username:
         return RedirectResponse("/", status_code=303)
     db.create_bookmark(conn, username, category, name, url)
-    return RedirectResponse("/bookmarks", status_code=303)
+    return _redirect_to_bookmarks()
 
 
 @app.post("/bookmarks/{bookmark_id}/delete")
@@ -185,5 +294,17 @@ def delete_bookmark(request: Request, bookmark_id: int, conn=Depends(get_db)):
     username = _current_username(request)
     if not username:
         return RedirectResponse("/", status_code=303)
+    row = db.get_bookmark(conn, username, bookmark_id)
+    if row is None:
+        return _redirect_to_bookmarks()
     db.delete_bookmark(conn, username, bookmark_id)
-    return RedirectResponse("/bookmarks", status_code=303)
+    return _redirect_to_bookmarks(undo="bookmark", category=row["category"], name=row["name"], url=row["url"])
+
+
+@app.post("/bookmarks/restore")
+def restore_bookmark(request: Request, category: str = Form(...), name: str = Form(...), url: str = Form(...), conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    db.create_bookmark(conn, username, category, name, url)
+    return _redirect_to_bookmarks()

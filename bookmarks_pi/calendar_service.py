@@ -28,8 +28,10 @@ def build_calendar_months(
     birthdays,
     vacations,
     shift_start: Optional[str],
+    holidays=(),
 ) -> list[dict]:
     birthday_lookup = {(b["month"], b["day"]): b["title"] for b in birthdays}
+    holiday_lookup = {(h["month"], h["day"]): h["title"] for h in holidays}
     vacation_ranges = [
         (date.fromisoformat(v["start_date"]), date.fromisoformat(v["end_date"]), v["title"])
         for v in vacations
@@ -44,6 +46,7 @@ def build_calendar_months(
                 _add_months(first_of_month, i),
                 today,
                 birthday_lookup,
+                holiday_lookup,
                 vacation_ranges,
                 shift_start_date,
             )
@@ -51,7 +54,14 @@ def build_calendar_months(
     return months
 
 
-def _build_month(first_day: date, today: date, birthday_lookup, vacation_ranges, shift_start: Optional[date]) -> dict:
+def _build_month(
+    first_day: date,
+    today: date,
+    birthday_lookup,
+    holiday_lookup,
+    vacation_ranges,
+    shift_start: Optional[date],
+) -> dict:
     days_in_month = stdlib_calendar.monthrange(first_day.year, first_day.month)[1]
     weeks: list[list[Optional[dict]]] = []
     week: list[Optional[dict]] = [None] * first_day.weekday()
@@ -60,6 +70,7 @@ def _build_month(first_day: date, today: date, birthday_lookup, vacation_ranges,
         current = date(first_day.year, first_day.month, day_num)
         is_future_or_today = current >= today
         birthday_title = birthday_lookup.get((current.month, current.day)) if is_future_or_today else None
+        holiday_title = holiday_lookup.get((current.month, current.day)) if is_future_or_today else None
         vacation_title = None
         if is_future_or_today:
             for start, end, title in vacation_ranges:
@@ -76,6 +87,7 @@ def _build_month(first_day: date, today: date, birthday_lookup, vacation_ranges,
                 "is_today": current == today,
                 "is_past": current < today,
                 "birthday_title": birthday_title,
+                "holiday_title": holiday_title,
                 "vacation_title": vacation_title,
                 "is_rest_day": is_rest_day,
             }

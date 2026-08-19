@@ -59,6 +59,16 @@ CREATE TABLE IF NOT EXISTS work_shifts (
     owner_username TEXT PRIMARY KEY,
     start_date TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS holidays (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    owner_username TEXT NOT NULL,
+    title TEXT NOT NULL,
+    month INTEGER NOT NULL,
+    day INTEGER NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_holidays_owner ON holidays (owner_username);
 """
 
 
@@ -144,6 +154,13 @@ def list_bookmarks(conn: sqlite3.Connection, owner_username: str, category: Opti
     ).fetchall()
 
 
+def get_bookmark(conn: sqlite3.Connection, owner_username: str, bookmark_id: int) -> Optional[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM bookmarks WHERE id = ? AND owner_username = ?",
+        (bookmark_id, owner_username),
+    ).fetchone()
+
+
 def delete_bookmark(conn: sqlite3.Connection, owner_username: str, bookmark_id: int) -> bool:
     cursor = conn.execute(
         "DELETE FROM bookmarks WHERE id = ? AND owner_username = ?",
@@ -188,6 +205,13 @@ def list_birthdays(conn: sqlite3.Connection, owner_username: str) -> list[sqlite
     ).fetchall()
 
 
+def get_birthday(conn: sqlite3.Connection, owner_username: str, birthday_id: int) -> Optional[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM birthdays WHERE id = ? AND owner_username = ?",
+        (birthday_id, owner_username),
+    ).fetchone()
+
+
 def delete_birthday(conn: sqlite3.Connection, owner_username: str, birthday_id: int) -> bool:
     cursor = conn.execute(
         "DELETE FROM birthdays WHERE id = ? AND owner_username = ?",
@@ -213,10 +237,49 @@ def list_vacations(conn: sqlite3.Connection, owner_username: str) -> list[sqlite
     ).fetchall()
 
 
+def get_vacation(conn: sqlite3.Connection, owner_username: str, vacation_id: int) -> Optional[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM vacations WHERE id = ? AND owner_username = ?",
+        (vacation_id, owner_username),
+    ).fetchone()
+
+
 def delete_vacation(conn: sqlite3.Connection, owner_username: str, vacation_id: int) -> bool:
     cursor = conn.execute(
         "DELETE FROM vacations WHERE id = ? AND owner_username = ?",
         (vacation_id, owner_username),
+    )
+    conn.commit()
+    return cursor.rowcount > 0
+
+
+def create_holiday(conn: sqlite3.Connection, owner_username: str, title: str, month: int, day: int) -> sqlite3.Row:
+    cursor = conn.execute(
+        "INSERT INTO holidays (owner_username, title, month, day, created_at) VALUES (?, ?, ?, ?, ?)",
+        (owner_username, title, month, day, _now()),
+    )
+    conn.commit()
+    return conn.execute("SELECT * FROM holidays WHERE id = ?", (cursor.lastrowid,)).fetchone()
+
+
+def list_holidays(conn: sqlite3.Connection, owner_username: str) -> list[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM holidays WHERE owner_username = ? ORDER BY month, day",
+        (owner_username,),
+    ).fetchall()
+
+
+def get_holiday(conn: sqlite3.Connection, owner_username: str, holiday_id: int) -> Optional[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM holidays WHERE id = ? AND owner_username = ?",
+        (holiday_id, owner_username),
+    ).fetchone()
+
+
+def delete_holiday(conn: sqlite3.Connection, owner_username: str, holiday_id: int) -> bool:
+    cursor = conn.execute(
+        "DELETE FROM holidays WHERE id = ? AND owner_username = ?",
+        (holiday_id, owner_username),
     )
     conn.commit()
     return cursor.rowcount > 0

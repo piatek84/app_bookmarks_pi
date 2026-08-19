@@ -33,6 +33,13 @@ def test_vacation_range_is_marked():
     assert _find_day(months, 17)["vacation_title"] is None
 
 
+def test_holiday_is_marked_on_future_occurrence():
+    holidays = [{"month": 1, "day": 20, "title": "Andalucía"}]
+    months = calendar_service.build_calendar_months(date(2026, 1, 15), 1, [], [], None, holidays)
+    assert _find_day(months, 20)["holiday_title"] == "Andalucía"
+    assert _find_day(months, 10)["holiday_title"] is None
+
+
 def test_work_shift_cycle_is_six_on_three_off():
     months = calendar_service.build_calendar_months(date(2026, 1, 1), 1, [], [], "2026-01-01")
     rest_days = [d["day"] for week in months[0]["weeks"] for d in week if d and d["is_rest_day"]]

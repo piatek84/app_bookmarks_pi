@@ -4,6 +4,18 @@
 <div class="page">
   <h1>{{ username }}&apos;s bookmarks <a class="logout" href="/logout">Log out</a></h1>
 
+  {% if undo %}
+  <div class="toast">
+    <span>Deleted {{ undo.label }}.</span>
+    <form method="post" action="{{ undo.action }}">
+      {% for field_name, field_value in undo.fields.items() %}
+      <input type="hidden" name="{{ field_name }}" value="{{ field_value }}" />
+      {% endfor %}
+      <button type="submit">Undo</button>
+    </form>
+  </div>
+  {% endif %}
+
   <section class="calendar-section">
     <div class="calendar-row">
       {% for month in calendar_months %}
@@ -21,8 +33,8 @@
               <span class="day"></span>
               {% else %}
               <span
-                class="day{% if day.is_past %} past-day{% endif %}{% if day.is_today %} current-day{% endif %}{% if day.birthday_title %} birthday-day{% endif %}{% if day.vacation_title %} vacation-day{% endif %}{% if day.is_rest_day %} rest-day{% endif %}"
-                {% if day.birthday_title %}title="{{ day.birthday_title }}"{% elif day.vacation_title %}title="{{ day.vacation_title }}"{% endif %}
+                class="day{% if day.is_past %} past-day{% endif %}{% if day.is_today %} current-day{% endif %}{% if day.birthday_title %} birthday-day{% endif %}{% if day.holiday_title %} holiday-day{% endif %}{% if day.vacation_title %} vacation-day{% endif %}{% if day.is_rest_day %} rest-day{% endif %}"
+                {% if day.birthday_title %}title="{{ day.birthday_title }}"{% elif day.holiday_title %}title="{{ day.holiday_title }}"{% elif day.vacation_title %}title="{{ day.vacation_title }}"{% endif %}
               >{{ day.day }}</span>
               {% endif %}
             {% endfor %}
@@ -34,12 +46,13 @@
 
     <div class="calendar-legend">
       <span class="legend-item"><span class="legend-swatch birthday-day"></span>Birthday</span>
+      <span class="legend-item"><span class="legend-swatch holiday-day"></span>Holiday</span>
       <span class="legend-item"><span class="legend-swatch vacation-day"></span>Vacation</span>
       <span class="legend-item"><span class="legend-swatch rest-day"></span>Rest day</span>
       <span class="legend-item"><span class="legend-swatch current-day"></span>Today</span>
     </div>
 
-    <details class="calendar-settings">
+    <details class="calendar-settings" {% if open_manage %}open{% endif %}>
       <summary>Manage calendar</summary>
       <div class="calendar-manage">
         <div class="manage-card">
@@ -67,6 +80,35 @@
             </li>
             {% else %}
             <li class="empty">No birthdays yet.</li>
+            {% endfor %}
+          </ul>
+        </div>
+
+        <div class="manage-card">
+          <h2>Holidays</h2>
+          <form class="calendar-form" method="post" action="/calendar/holidays">
+            <input placeholder="Name" name="title" required />
+            <div class="date-fields">
+              <input name="day" type="number" placeholder="Day" min="1" max="31" required />
+              <select name="month" required>
+                <option value="" selected disabled>Month</option>
+                {% for month_name in ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] %}
+                <option value="{{ loop.index }}">{{ month_name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <button type="submit">Add</button>
+          </form>
+          <ul class="calendar-list">
+            {% for h in holidays %}
+            <li>
+              <span>{{ '%02d'|format(h['day']) }}/{{ '%02d'|format(h['month']) }} - {{ h['title'] }}</span>
+              <form method="post" action="/calendar/holidays/{{ h['id'] }}/delete">
+                <button type="submit" class="delete-btn" aria-label="Delete {{ h['title'] }}">&times;</button>
+              </form>
+            </li>
+            {% else %}
+            <li class="empty">No holidays yet.</li>
             {% endfor %}
           </ul>
         </div>
