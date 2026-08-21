@@ -116,7 +116,8 @@ CREATE TABLE IF NOT EXISTS sticky_notes (
     pos_y INTEGER,
     rotation INTEGER,
     color TEXT,
-    size INTEGER,
+    width INTEGER,
+    height INTEGER,
     created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_sticky_notes_owner ON sticky_notes (owner_username);
@@ -159,8 +160,10 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE sticky_notes ADD COLUMN rotation INTEGER")
     if "color" not in note_columns:
         conn.execute("ALTER TABLE sticky_notes ADD COLUMN color TEXT")
-    if "size" not in note_columns:
-        conn.execute("ALTER TABLE sticky_notes ADD COLUMN size INTEGER")
+    if "width" not in note_columns:
+        conn.execute("ALTER TABLE sticky_notes ADD COLUMN width INTEGER")
+    if "height" not in note_columns:
+        conn.execute("ALTER TABLE sticky_notes ADD COLUMN height INTEGER")
 
 
 def open_connection(database_path: str) -> sqlite3.Connection:
@@ -780,10 +783,12 @@ def update_sticky_note_color(conn: sqlite3.Connection, owner_username: str, note
     return cursor.rowcount > 0
 
 
-def update_sticky_note_size(conn: sqlite3.Connection, owner_username: str, note_id: int, size: int) -> bool:
+def update_sticky_note_size(
+    conn: sqlite3.Connection, owner_username: str, note_id: int, width: int, height: int
+) -> bool:
     cursor = conn.execute(
-        "UPDATE sticky_notes SET size = ? WHERE id = ? AND owner_username = ?",
-        (size, note_id, owner_username),
+        "UPDATE sticky_notes SET width = ?, height = ? WHERE id = ? AND owner_username = ?",
+        (width, height, note_id, owner_username),
     )
     conn.commit()
     return cursor.rowcount > 0

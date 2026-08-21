@@ -220,8 +220,6 @@ def bookmarks_page(
         documents=db.list_documents(conn, username),
         positioned_sticky_notes=positioned_sticky_notes,
         default_sticky_notes=default_sticky_notes,
-        size_min=STICKY_NOTE_SIZE_MIN,
-        size_max=STICKY_NOTE_SIZE_MAX,
         open_manage=bool(open_manage),
         open_bookmarks=bool(open_bookmarks),
         open_documents=bool(open_documents),
@@ -640,12 +638,15 @@ def recolor_sticky_note(request: Request, note_id: int, color: str = Form(...), 
 
 
 @app.post("/notes/{note_id}/size")
-def resize_sticky_note(request: Request, note_id: int, size: int = Form(...), conn=Depends(get_db)):
+def resize_sticky_note(
+    request: Request, note_id: int, width: int = Form(...), height: int = Form(...), conn=Depends(get_db)
+):
     username = _current_username(request)
     if not username:
         return RedirectResponse("/", status_code=303)
-    size = max(STICKY_NOTE_SIZE_MIN, min(STICKY_NOTE_SIZE_MAX, size))
-    db.update_sticky_note_size(conn, username, note_id, size)
+    width = max(STICKY_NOTE_SIZE_MIN, min(STICKY_NOTE_SIZE_MAX, width))
+    height = max(STICKY_NOTE_SIZE_MIN, min(STICKY_NOTE_SIZE_MAX, height))
+    db.update_sticky_note_size(conn, username, note_id, width, height)
     return _redirect_to_bookmarks(fragment="sticky-notes")
 
 

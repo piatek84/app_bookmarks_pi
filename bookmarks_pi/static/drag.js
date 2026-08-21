@@ -380,6 +380,28 @@
       event.preventDefault();
       var form = document.getElementById(editLink.getAttribute("href").slice(1));
       if (form) form.classList.add("editing");
+      // The note gets a textarea-style resize handle (see .resizable in
+      // styles.css) only while its edit form is open, and its own
+      // draggable="true" (used for click-and-drag repositioning in view
+      // mode) is switched off for the same span -- otherwise grabbing that
+      // corner to resize starts a native element drag instead, since a
+      // draggable ancestor hijacks mouse gestures over its descendants.
+      var editNote = editLink.closest(".sticky-note[data-id]");
+      if (editNote) {
+        editNote.classList.add("resizable");
+        editNote.draggable = false;
+        // Seeds the "last known size" the mouseup handler below diffs
+        // against, using the note's own inline width/height (empty if it's
+        // never been resized) rather than a measured rect -- getBoundingClientRect
+        // returns sub-pixel floats that can differ ever so slightly between
+        // renders for reasons unrelated to resizing (font hinting, layout
+        // rounding), which would misread an unrelated click inside the open
+        // form (a color swatch, Cancel) as a size change. Inline style is
+        // exactly what the resize drag itself writes, so it only changes
+        // when a resize actually happened.
+        editNote.dataset.width = editNote.style.width;
+        editNote.dataset.height = editNote.style.height;
+      }
       return;
     }
     var cancelLink = event.target.closest(".sticky-note-edit-actions a");
@@ -387,6 +409,11 @@
       event.preventDefault();
       var editForm = cancelLink.closest(".sticky-note-edit-form");
       if (editForm) editForm.classList.remove("editing");
+      var cancelNote = cancelLink.closest(".sticky-note[data-id]");
+      if (cancelNote) {
+        cancelNote.classList.remove("resizable");
+        cancelNote.draggable = true;
+      }
       return;
     }
     // Color and rotation apply immediately (like drag-to-reposition) rather
@@ -411,24 +438,35 @@
     }
   });
 
-  // The size slider updates live while dragging (so it's clear what's being
-  // picked) but only saves -- via the AJAX swap, like color/rotation above --
-  // once the user releases it. Saving on every "input" tick would fight the
-  // drag with a mid-gesture DOM swap.
-  document.addEventListener("input", function (event) {
-    var slider = event.target.closest(".sticky-note-size-slider");
-    if (!slider) return;
-    var sizeNote = slider.closest(".sticky-note[data-id]");
-    if (!sizeNote) return;
-    sizeNote.style.setProperty("--note-size", slider.value + "px");
-  });
-
-  document.addEventListener("change", function (event) {
-    var slider = event.target.closest(".sticky-note-size-slider");
-    if (!slider) return;
-    var sizeNote = slider.closest(".sticky-note[data-id]");
-    if (!sizeNote) return;
-    submitAjax("/notes/" + sizeNote.dataset.id + "/size", { size: slider.value });
+  // The browser's native resize handle (see .resizable in styles.css) has no
+  // "resize finished" event of its own -- it just keeps the element's own
+  // inline width/height styles updated live as the user drags. A delegated
+  // mouseup is the simplest way to notice a drag just ended: if a resizable
+  // note's inline size differs from what's saved, persist it. Reading the
+  // raw inline style (rather than a measured getBoundingClientRect) matters
+  // because that's exactly what the resize drag itself writes, and nothing
+  // else -- a measured rect returns sub-pixel floats that can shift ever so
+  // slightly between renders for reasons unrelated to resizing (font
+  // hinting, layout rounding), which would misread an unrelated mouseup
+  // inside the open form (a color swatch, releasing after selecting text)
+  // as a size change. Checking every .resizable note (there's normally at
+  // most one -- only an open edit form gets this class) rather than
+  // filtering by event.target matters because dragging into the min/max
+  // clamp means the box stops moving before the cursor does, so the
+  // mouseup can land outside the note's now-smaller-or-larger bounds.
+  document.addEventListener("mouseup", function () {
+    document.querySelectorAll(".sticky-note.resizable[data-id]").forEach(function (note) {
+      var width = note.style.width;
+      var height = note.style.height;
+      if (!width || !height) return; // never actually dragged the handle
+      if (width === note.dataset.width && height === note.dataset.height) return;
+      note.dataset.width = width;
+      note.dataset.height = height;
+      submitAjax("/notes/" + note.dataset.id + "/size", {
+        width: Math.round(parseFloat(width)),
+        height: Math.round(parseFloat(height)),
+      });
+    });
   });
 
   document.addEventListener("submit", function (event) {

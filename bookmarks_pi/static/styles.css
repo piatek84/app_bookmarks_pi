@@ -890,9 +890,8 @@ button:hover {
 
 .sticky-note {
   position: relative;
-  width: var(--note-size, 150px);
-  /* Keeps the note's original 150x130 aspect ratio at any chosen size. */
-  min-height: calc(var(--note-size, 150px) * 130 / 150);
+  width: 150px;
+  min-height: 130px;
   padding: 0.9rem 0.7rem 0.6rem;
   background: var(--sticky-bg);
   color: var(--sticky-fg);
@@ -907,6 +906,23 @@ button:hover {
      so a freely-dragged note (position: absolute, see .page) can be dropped
      on top of any of it; still below the modal overlay's z-index: 20. */
   z-index: 5;
+  /* Required for the native resize handle (see .resizable) to render at all;
+     harmless otherwise since content already wraps/clips within the box. */
+  overflow: hidden;
+}
+
+/* Toggled by JS only while a note's edit form is open -- gives the note a
+   native, textarea-style resize handle in its bottom-right corner. Gated to
+   edit mode (rather than always-on) so it never fights the note's own
+   draggable="true" position-dragging in view mode; JS also flips draggable
+   to "false" for the same reason while this class is present, see drag.js. */
+.sticky-note.resizable {
+  resize: both;
+  /* Mirrors STICKY_NOTE_SIZE_MIN/MAX in main.py -- keep in sync. */
+  min-width: 90px;
+  min-height: 90px;
+  max-width: 220px;
+  max-height: 220px;
 }
 
 /* Only real notes (data-id) are drag targets -- excludes the "add note" box,
@@ -1025,18 +1041,6 @@ button:hover {
 }
 
 .sticky-note-rotate-btn:hover {
-  opacity: 1;
-}
-
-.sticky-note-size-slider {
-  width: 100%;
-  margin: 0.4rem 0 0;
-  accent-color: var(--sticky-fg);
-  opacity: 0.7;
-  cursor: pointer;
-}
-
-.sticky-note-size-slider:hover {
   opacity: 1;
 }
 
