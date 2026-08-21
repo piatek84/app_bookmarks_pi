@@ -96,6 +96,11 @@ h2 {
 
 .page {
   width: min(1120px, 100%);
+  /* Positioning context for freely-dragged sticky notes (position: absolute,
+     set inline once a note has a saved pos_x/pos_y) so they can float over
+     any other section -- calendar, bookmarks, documents -- not just their
+     own .sticky-notes box. */
+  position: relative;
 }
 
 label {
@@ -893,6 +898,20 @@ button:hover {
   border-radius: 2px;
   box-shadow: 2px 4px 10px rgba(0, 0, 0, 0.3);
   transition: transform 0.15s ease;
+  /* Above the page's normal-flow content (calendar, bookmarks, documents)
+     so a freely-dragged note (position: absolute, see .page) can be dropped
+     on top of any of it; still below the modal overlay's z-index: 20. */
+  z-index: 5;
+}
+
+/* Only real notes (data-id) are drag targets -- excludes the "add note" box,
+   which reuses .sticky-note for its looks but isn't draggable. */
+.sticky-note[data-id] {
+  cursor: grab;
+}
+
+.sticky-note.dragging {
+  opacity: 0.4;
 }
 
 .sticky-notes .sticky-note:nth-child(3n+1) {
@@ -909,7 +928,7 @@ button:hover {
 
 .sticky-note:hover {
   transform: rotate(0deg) scale(1.03);
-  z-index: 1;
+  z-index: 6;
 }
 
 .sticky-note p {

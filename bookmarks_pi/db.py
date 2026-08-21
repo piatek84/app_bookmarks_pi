@@ -112,6 +112,8 @@ CREATE TABLE IF NOT EXISTS sticky_notes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     owner_username TEXT NOT NULL,
     content TEXT NOT NULL,
+    pos_x INTEGER,
+    pos_y INTEGER,
     created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_sticky_notes_owner ON sticky_notes (owner_username);
@@ -144,6 +146,12 @@ def _migrate(conn: sqlite3.Connection) -> None:
     document_columns = {row[1] for row in conn.execute("PRAGMA table_info(documents)").fetchall()}
     if "position" not in document_columns:
         conn.execute("ALTER TABLE documents ADD COLUMN position INTEGER")
+
+    note_columns = {row[1] for row in conn.execute("PRAGMA table_info(sticky_notes)").fetchall()}
+    if "pos_x" not in note_columns:
+        conn.execute("ALTER TABLE sticky_notes ADD COLUMN pos_x INTEGER")
+    if "pos_y" not in note_columns:
+        conn.execute("ALTER TABLE sticky_notes ADD COLUMN pos_y INTEGER")
 
 
 def open_connection(database_path: str) -> sqlite3.Connection:
@@ -731,6 +739,15 @@ def update_sticky_note(conn: sqlite3.Connection, owner_username: str, note_id: i
     cursor = conn.execute(
         "UPDATE sticky_notes SET content = ? WHERE id = ? AND owner_username = ?",
         (content, note_id, owner_username),
+    )
+    conn.commit()
+    return cursor.rowcount > 0
+
+
+def update_sticky_note_position(conn: sqlite3.Connection, owner_username: str, note_id: int, x: int, y: int) -> bool:
+    cursor = conn.execute(
+        "UPDATE sticky_notes SET pos_x = ?, pos_y = ? WHERE id = ? AND owner_username = ?",
+        (x, y, note_id, owner_username),
     )
     conn.commit()
     return cursor.rowcount > 0

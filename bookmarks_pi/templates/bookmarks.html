@@ -286,7 +286,7 @@
     {% if sticky_notes %}
     <div class="sticky-notes">
       {% for note in sticky_notes %}
-      <div class="sticky-note">
+      <div class="sticky-note" data-id="{{ note['id'] }}" draggable="true"{% if note['pos_x'] is not none and note['pos_y'] is not none %} style="position: absolute; left: {{ note['pos_x'] }}px; top: {{ note['pos_y'] }}px;"{% endif %}>
         <form class="sticky-note-edit-form" id="edit-note-{{ note['id'] }}" method="post" action="/notes/{{ note['id'] }}/edit">
           <textarea name="content" required>{{ note['content'] }}</textarea>
           <div class="sticky-note-edit-actions">

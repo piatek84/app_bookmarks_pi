@@ -117,6 +117,58 @@
     });
   }
 
+  // Sticky notes drag freely anywhere on the page (not just reorder within a
+  // list), so they can float over any other section -- calendar, bookmarks,
+  // documents. Delegated on `document`, since the drop target is the whole
+  // page and, unlike the other setups here, nothing about it depends on
+  // which specific note elements currently exist -- so it's wired up once
+  // and never needs re-binding after an AJAX swap.
+  function setupNoteDrag() {
+    var dragEl = null;
+    var grabX = 0;
+    var grabY = 0;
+
+    document.addEventListener("dragstart", function (event) {
+      var note = event.target.closest(".sticky-note[data-id]");
+      if (!note || note.querySelector(".sticky-note-edit-form.editing")) return;
+      dragEl = note;
+      var rect = note.getBoundingClientRect();
+      grabX = event.clientX - rect.left;
+      grabY = event.clientY - rect.top;
+      note.classList.add("dragging");
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", "");
+    });
+
+    document.addEventListener("dragend", function () {
+      if (dragEl) dragEl.classList.remove("dragging");
+      dragEl = null;
+    });
+
+    document.addEventListener("dragover", function (event) {
+      if (!dragEl) return;
+      event.preventDefault();
+    });
+
+    document.addEventListener("drop", function (event) {
+      if (!dragEl) return;
+      event.preventDefault();
+      var page = dragEl.closest(".page");
+      if (!page) return;
+      // clientX/Y and the page's own viewport-relative rect are both taken
+      // at the same scroll position, so their difference is scroll-invariant
+      // -- exactly the page-relative offset a position:absolute left/top
+      // needs, however far down the page has been scrolled.
+      var pageRect = page.getBoundingClientRect();
+      var x = Math.max(0, Math.round(event.clientX - pageRect.left - grabX));
+      var y = Math.max(0, Math.round(event.clientY - pageRect.top - grabY));
+      dragEl.style.position = "absolute";
+      dragEl.style.left = x + "px";
+      dragEl.style.top = y + "px";
+      submitAjax("/notes/" + dragEl.dataset.id + "/position", { x: x, y: y });
+    });
+  }
+
   function setupDragReorder(container, selector, ignoreSelector, datasetKey, onDrop) {
     var items = container.querySelectorAll(selector);
     for (var i = 0; i < items.length; i++) {
@@ -370,5 +422,6 @@
   document.addEventListener("DOMContentLoaded", function () {
     initGroups();
     initDocumentDrag();
+    setupNoteDrag();
   });
 })();
