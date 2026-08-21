@@ -558,7 +558,7 @@ button:hover {
   font-weight: 700;
 }
 
-.vacation-day {
+.day.vacation-day {
   background: color-mix(in srgb, var(--vacation) 30%, transparent);
 }
 
