@@ -480,6 +480,23 @@ button:hover {
 
 .calendar-arrow {
   flex-shrink: 0;
+  width: 1.1rem;
+  height: 3rem;
+}
+
+.arrow-tip {
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+}
+
+.arrow-tip-left {
+  border-right: 6px solid currentColor;
+}
+
+.arrow-tip-right {
+  border-left: 6px solid currentColor;
 }
 
 .calendar-row {
