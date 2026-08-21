@@ -26,6 +26,37 @@
   </div>
 </li>
 {% endmacro %}
+{% macro sticky_note_item(note) %}
+<div class="sticky-note" data-id="{{ note['id'] }}" data-color="{{ note['color'] or 'yellow' }}" draggable="true"{% if note['pos_x'] is not none and note['pos_y'] is not none or note['rotation'] is not none %} style="{% if note['pos_x'] is not none and note['pos_y'] is not none %}position: absolute; left: {{ note['pos_x'] }}px; top: {{ note['pos_y'] }}px;{% endif %}{% if note['rotation'] is not none %}--note-rotation: {{ note['rotation'] }}deg;{% endif %}"{% endif %}>
+  <form class="sticky-note-edit-form" id="edit-note-{{ note['id'] }}" method="post" action="/notes/{{ note['id'] }}/edit">
+    <textarea name="content" required>{{ note['content'] }}</textarea>
+    <div class="sticky-note-style-controls">
+      <div class="sticky-note-colors">
+        {% for c in ['yellow', 'pink', 'blue', 'green', 'orange', 'purple'] %}
+        <button type="button" class="sticky-note-color-swatch sticky-note-color-{{ c }}" data-color="{{ c }}" aria-label="{{ c }}"></button>
+        {% endfor %}
+      </div>
+      <div class="sticky-note-rotate">
+        <button type="button" class="sticky-note-rotate-btn" data-dir="-1" aria-label="Rotate left">&#8634;</button>
+        <button type="button" class="sticky-note-rotate-btn" data-dir="1" aria-label="Rotate right">&#8635;</button>
+      </div>
+    </div>
+    <div class="sticky-note-edit-actions">
+      <a href="#">Cancel</a>
+      <button type="submit">Save</button>
+    </div>
+  </form>
+  <div class="sticky-note-view">
+    <div class="sticky-note-actions">
+      <a href="#edit-note-{{ note['id'] }}" class="sticky-note-edit" aria-label="Edit note"><span class="edit-icon">&#9998;</span></a>
+      <form method="post" action="/notes/{{ note['id'] }}/delete">
+        <button type="submit" class="sticky-note-delete" aria-label="Delete note">&times;</button>
+      </form>
+    </div>
+    <p>{{ note['content'] }}</p>
+  </div>
+</div>
+{% endmacro %}
 {% block theme_toggle %}{% endblock %}
 {% block content %}
 <div class="page">
@@ -283,38 +314,13 @@
 
   <div class="notes-documents-row">
   <section class="sticky-notes-section" id="sticky-notes">
-    {% if sticky_notes %}
+    {% for note in positioned_sticky_notes %}
+    {{ sticky_note_item(note) }}
+    {% endfor %}
+    {% if default_sticky_notes %}
     <div class="sticky-notes">
-      {% for note in sticky_notes %}
-      <div class="sticky-note" data-id="{{ note['id'] }}" data-color="{{ note['color'] or 'yellow' }}" draggable="true"{% if note['pos_x'] is not none and note['pos_y'] is not none or note['rotation'] is not none %} style="{% if note['pos_x'] is not none and note['pos_y'] is not none %}position: absolute; left: {{ note['pos_x'] }}px; top: {{ note['pos_y'] }}px;{% endif %}{% if note['rotation'] is not none %}--note-rotation: {{ note['rotation'] }}deg;{% endif %}"{% endif %}>
-        <form class="sticky-note-edit-form" id="edit-note-{{ note['id'] }}" method="post" action="/notes/{{ note['id'] }}/edit">
-          <textarea name="content" required>{{ note['content'] }}</textarea>
-          <div class="sticky-note-style-controls">
-            <div class="sticky-note-colors">
-              {% for c in ['yellow', 'pink', 'blue', 'green', 'orange', 'purple'] %}
-              <button type="button" class="sticky-note-color-swatch sticky-note-color-{{ c }}" data-color="{{ c }}" aria-label="{{ c }}"></button>
-              {% endfor %}
-            </div>
-            <div class="sticky-note-rotate">
-              <button type="button" class="sticky-note-rotate-btn" data-dir="-1" aria-label="Rotate left">&#8634;</button>
-              <button type="button" class="sticky-note-rotate-btn" data-dir="1" aria-label="Rotate right">&#8635;</button>
-            </div>
-          </div>
-          <div class="sticky-note-edit-actions">
-            <a href="#">Cancel</a>
-            <button type="submit">Save</button>
-          </div>
-        </form>
-        <div class="sticky-note-view">
-          <div class="sticky-note-actions">
-            <a href="#edit-note-{{ note['id'] }}" class="sticky-note-edit" aria-label="Edit note"><span class="edit-icon">&#9998;</span></a>
-            <form method="post" action="/notes/{{ note['id'] }}/delete">
-              <button type="submit" class="sticky-note-delete" aria-label="Delete note">&times;</button>
-            </form>
-          </div>
-          <p>{{ note['content'] }}</p>
-        </div>
-      </div>
+      {% for note in default_sticky_notes %}
+      {{ sticky_note_item(note) }}
       {% endfor %}
       <form class="sticky-note sticky-note-add" method="post" action="/notes">
         <textarea name="content" placeholder="New note..." required></textarea>

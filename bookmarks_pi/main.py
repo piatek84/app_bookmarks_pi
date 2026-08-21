@@ -191,6 +191,13 @@ def bookmarks_page(
         for b in shift_blocks
     ]
     db.sync_documents_from_disk(conn, username, Path(settings.uploads_path) / username)
+    sticky_notes = db.list_sticky_notes(conn, username)
+    # A note dragged out to a free position no longer counts as being "in the
+    # list" -- it floats on its own regardless of what follows, so the list
+    # only collapses behind "Manage sticky notes" once none of the remaining
+    # (default-position) notes are left either.
+    positioned_sticky_notes = [n for n in sticky_notes if n["pos_x"] is not None and n["pos_y"] is not None]
+    default_sticky_notes = [n for n in sticky_notes if n["pos_x"] is None or n["pos_y"] is None]
     return render(
         request,
         "bookmarks.html",
@@ -209,7 +216,8 @@ def bookmarks_page(
         work_shift=work_shift,
         shift_blocks=shift_blocks_view,
         documents=db.list_documents(conn, username),
-        sticky_notes=db.list_sticky_notes(conn, username),
+        positioned_sticky_notes=positioned_sticky_notes,
+        default_sticky_notes=default_sticky_notes,
         open_manage=bool(open_manage),
         open_bookmarks=bool(open_bookmarks),
         open_documents=bool(open_documents),
