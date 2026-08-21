@@ -53,8 +53,25 @@ def test_shift_block_marks_the_six_day_span():
     )
     assert _find_day(months, 20)["shift_block_type"] == "afternoon"
     assert _find_day(months, 24)["shift_block_type"] == "afternoon"
-    assert _find_day(months, 25)["shift_block_type"] is None
+    # Outside the block it falls back to the default shift, not blank.
+    assert _find_day(months, 25)["shift_block_type"] == "morning"
     assert _find_day(months, 10)["shift_block_type"] is None
+
+
+def test_days_default_to_morning_shift_when_unconfigured():
+    months = calendar_service.build_calendar_months(date(2026, 1, 15), 1, [], [], None)
+    assert _find_day(months, 20)["shift_block_type"] == "morning"
+    assert _find_day(months, 10)["shift_block_type"] is None
+
+
+def test_rest_days_do_not_default_to_morning_shift():
+    months = calendar_service.build_calendar_months(date(2026, 1, 1), 1, [], [], "2026-01-01")
+    rest_day = _find_day(months, 7)
+    assert rest_day["is_rest_day"] is True
+    assert rest_day["shift_block_type"] is None
+    work_day = _find_day(months, 2)
+    assert work_day["is_rest_day"] is False
+    assert work_day["shift_block_type"] == "morning"
 
 
 def test_past_days_are_not_marked():

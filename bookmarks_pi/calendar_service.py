@@ -8,6 +8,7 @@ from typing import Optional
 WORK_DAYS = 6
 REST_DAYS = 3
 CYCLE_LENGTH = WORK_DAYS + REST_DAYS
+DEFAULT_SHIFT_TYPE = "morning"
 
 
 def _add_months(first_of_month: date, months: int) -> date:
@@ -103,6 +104,8 @@ def _build_month(
                 if start <= current <= end:
                     shift_block_type = block_type
                     break
+            if shift_block_type is None and not is_rest_day:
+                shift_block_type = DEFAULT_SHIFT_TYPE
 
         hint_parts = []
         if birthday_title:
