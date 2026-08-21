@@ -232,11 +232,9 @@
           <h2>Work shift</h2>
           <p class="hint">Automatic cycle of 6 work days followed by 3 rest days, computed from the cycle start date.</p>
           <form class="calendar-form" method="post" action="/calendar/shift">
-            <div class="date-fields">
-              <label>
-                Cycle start date (a work day)
-                <input name="start_date" type="date" value="{{ work_shift['start_date'] if work_shift else '' }}" required />
-              </label>
+            <label for="shift-start-date">Cycle start date (a work day)</label>
+            <div class="shift-row">
+              <input id="shift-start-date" name="start_date" type="date" value="{{ work_shift['start_date'] if work_shift else '' }}" required />
               <label class="checkbox-label">
                 <input type="checkbox" name="enabled" {% if not work_shift or work_shift['enabled'] %}checked{% endif %} />
                 Enabled

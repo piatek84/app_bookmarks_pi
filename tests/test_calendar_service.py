@@ -46,20 +46,27 @@ def test_work_shift_cycle_is_six_on_three_off():
     assert rest_days[:3] == [7, 8, 9]
 
 
-def test_shift_block_marks_the_six_day_span():
+def test_shift_block_marks_the_six_day_span_even_without_the_auto_cycle():
+    # Explicit shift blocks are independent of the automatic cycle -- they work
+    # whether or not a work-shift start date is configured.
     shift_blocks = [{"block_start": "2026-01-19", "shift_type": "afternoon"}]
     months = calendar_service.build_calendar_months(
         date(2026, 1, 15), 1, [], [], None, shift_blocks=shift_blocks
     )
     assert _find_day(months, 20)["shift_block_type"] == "afternoon"
     assert _find_day(months, 24)["shift_block_type"] == "afternoon"
-    # Outside the block it falls back to the default shift, not blank.
-    assert _find_day(months, 25)["shift_block_type"] == "morning"
+    # Outside the block, with no cycle configured, there's no default either.
+    assert _find_day(months, 25)["shift_block_type"] is None
     assert _find_day(months, 10)["shift_block_type"] is None
 
 
-def test_days_default_to_morning_shift_when_unconfigured():
+def test_no_default_shift_when_the_auto_cycle_is_unconfigured():
     months = calendar_service.build_calendar_months(date(2026, 1, 15), 1, [], [], None)
+    assert _find_day(months, 20)["shift_block_type"] is None
+
+
+def test_days_default_to_morning_shift_when_cycle_is_enabled():
+    months = calendar_service.build_calendar_months(date(2026, 1, 15), 1, [], [], "2026-01-01")
     assert _find_day(months, 20)["shift_block_type"] == "morning"
     assert _find_day(months, 10)["shift_block_type"] is None
 
