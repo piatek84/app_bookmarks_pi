@@ -86,6 +86,24 @@ CREATE TABLE IF NOT EXISTS category_order (
     position INTEGER NOT NULL,
     PRIMARY KEY (owner_username, category)
 );
+
+CREATE TABLE IF NOT EXISTS documents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    owner_username TEXT NOT NULL,
+    stored_name TEXT NOT NULL,
+    original_name TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_documents_owner ON documents (owner_username);
+
+CREATE TABLE IF NOT EXISTS sticky_notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    owner_username TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_sticky_notes_owner ON sticky_notes (owner_username);
 """
 
 
@@ -522,6 +540,65 @@ def set_work_shift_start(conn: sqlite3.Connection, owner_username: str, start_da
         (owner_username, start_date),
     )
     conn.commit()
+
+
+def create_document(
+    conn: sqlite3.Connection, owner_username: str, stored_name: str, original_name: str, size: int
+) -> sqlite3.Row:
+    cursor = conn.execute(
+        "INSERT INTO documents (owner_username, stored_name, original_name, size, created_at) VALUES (?, ?, ?, ?, ?)",
+        (owner_username, stored_name, original_name, size, _now()),
+    )
+    conn.commit()
+    return conn.execute("SELECT * FROM documents WHERE id = ?", (cursor.lastrowid,)).fetchone()
+
+
+def list_documents(conn: sqlite3.Connection, owner_username: str) -> list[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM documents WHERE owner_username = ? ORDER BY created_at DESC",
+        (owner_username,),
+    ).fetchall()
+
+
+def get_document(conn: sqlite3.Connection, owner_username: str, document_id: int) -> Optional[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM documents WHERE id = ? AND owner_username = ?",
+        (document_id, owner_username),
+    ).fetchone()
+
+
+def delete_document(conn: sqlite3.Connection, owner_username: str, document_id: int) -> bool:
+    cursor = conn.execute(
+        "DELETE FROM documents WHERE id = ? AND owner_username = ?",
+        (document_id, owner_username),
+    )
+    conn.commit()
+    return cursor.rowcount > 0
+
+
+def create_sticky_note(conn: sqlite3.Connection, owner_username: str, content: str) -> sqlite3.Row:
+    cursor = conn.execute(
+        "INSERT INTO sticky_notes (owner_username, content, created_at) VALUES (?, ?, ?)",
+        (owner_username, content, _now()),
+    )
+    conn.commit()
+    return conn.execute("SELECT * FROM sticky_notes WHERE id = ?", (cursor.lastrowid,)).fetchone()
+
+
+def list_sticky_notes(conn: sqlite3.Connection, owner_username: str) -> list[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM sticky_notes WHERE owner_username = ? ORDER BY created_at",
+        (owner_username,),
+    ).fetchall()
+
+
+def delete_sticky_note(conn: sqlite3.Connection, owner_username: str, note_id: int) -> bool:
+    cursor = conn.execute(
+        "DELETE FROM sticky_notes WHERE id = ? AND owner_username = ?",
+        (note_id, owner_username),
+    )
+    conn.commit()
+    return cursor.rowcount > 0
 
 
 def get_work_shift_start(conn: sqlite3.Connection, owner_username: str) -> Optional[str]:

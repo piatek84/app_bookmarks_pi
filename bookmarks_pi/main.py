@@ -2,14 +2,16 @@
 one SQLite file. No JS -- forms post back to the server and pages re-render.
 """
 import re
+import shutil
 import sqlite3
 import urllib.parse
+import uuid
 from datetime import date
 from pathlib import Path
 from typing import Iterator, Optional
 
-from fastapi import Depends, FastAPI, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import Depends, FastAPI, File, Form, Request, UploadFile
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from starlette.middleware.sessions import SessionMiddleware
@@ -19,6 +21,7 @@ from .config import load_settings
 
 settings = load_settings()
 db.init_db(settings.database_path)
+Path(settings.uploads_path).mkdir(parents=True, exist_ok=True)
 
 NUM_CALENDAR_MONTHS = 3
 
@@ -138,6 +141,7 @@ def bookmarks_page(
     conn=Depends(get_db),
     open_manage: Optional[str] = None,
     open_bookmarks: Optional[str] = None,
+    open_documents: Optional[str] = None,
     open_more: Optional[str] = None,
     undo: Optional[str] = None,
     title: Optional[str] = None,
@@ -171,8 +175,11 @@ def bookmarks_page(
         holidays=holidays,
         tasks=tasks,
         shift_start=shift_start,
+        documents=db.list_documents(conn, username),
+        sticky_notes=db.list_sticky_notes(conn, username),
         open_manage=bool(open_manage),
         open_bookmarks=bool(open_bookmarks),
+        open_documents=bool(open_documents),
         open_more_category=open_more,
         undo=_build_undo_context(undo, title, month, day, start_date, end_date, category, name, url),
         error=None,
@@ -436,3 +443,65 @@ def reorder_bookmarks(
     return _redirect_to_bookmarks(
         fragment=f"category-{slugify(category)}", open_more=category if open_more else None
     )
+
+
+def _document_path(username: str, stored_name: str) -> Path:
+    return Path(settings.uploads_path) / username / stored_name
+
+
+@app.post("/documents")
+def upload_document(request: Request, file: UploadFile = File(...), conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    extension = Path(file.filename or "").suffix
+    if not re.fullmatch(r"\.[A-Za-z0-9]{1,10}", extension):
+        extension = ""
+    stored_name = f"{uuid.uuid4().hex}{extension}"
+    dest = _document_path(username, stored_name)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    with dest.open("wb") as out:
+        shutil.copyfileobj(file.file, out)
+    db.create_document(conn, username, stored_name, file.filename or stored_name, dest.stat().st_size)
+    return _redirect_to_bookmarks(open_documents=1, fragment="documents-settings")
+
+
+@app.get("/documents/{document_id}")
+def download_document(request: Request, document_id: int, conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    row = db.get_document(conn, username, document_id)
+    if row is None:
+        return RedirectResponse("/bookmarks", status_code=303)
+    return FileResponse(_document_path(username, row["stored_name"]), filename=row["original_name"])
+
+
+@app.post("/documents/{document_id}/delete")
+def delete_document(request: Request, document_id: int, conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    row = db.get_document(conn, username, document_id)
+    if row is not None:
+        _document_path(username, row["stored_name"]).unlink(missing_ok=True)
+        db.delete_document(conn, username, document_id)
+    return _redirect_to_bookmarks(open_documents=1, fragment="documents-settings")
+
+
+@app.post("/notes")
+def add_sticky_note(request: Request, content: str = Form(...), conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    db.create_sticky_note(conn, username, content)
+    return _redirect_to_bookmarks(fragment="sticky-notes")
+
+
+@app.post("/notes/{note_id}/delete")
+def delete_sticky_note(request: Request, note_id: int, conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    db.delete_sticky_note(conn, username, note_id)
+    return _redirect_to_bookmarks(fragment="sticky-notes")

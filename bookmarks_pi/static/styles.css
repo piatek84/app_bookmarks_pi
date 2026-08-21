@@ -10,6 +10,8 @@
   --rest: #c9b6e4;
   --holiday: #ff6b6b;
   --task: #f4d35e;
+  --sticky-bg: #fdea6b;
+  --sticky-fg: #3a3216;
 }
 
 html[data-theme="light"] {
@@ -94,6 +96,7 @@ label {
 
 input,
 select,
+textarea,
 button {
   font: inherit;
   padding: 0.55rem 0.7rem;
@@ -537,7 +540,7 @@ button:hover {
   content: "🎉";
   position: absolute;
   top: 50%;
-  right: 1px;
+  right: 3px;
   transform: translateY(-50%);
   font-size: 0.5rem;
   line-height: 1;
@@ -721,4 +724,99 @@ button:hover {
 .calendar-list li.empty {
   justify-content: center;
   color: var(--muted);
+}
+
+/* Sticky notes */
+
+.sticky-notes-section {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.sticky-notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.1rem;
+}
+
+.sticky-note {
+  position: relative;
+  width: 150px;
+  min-height: 130px;
+  padding: 0.9rem 0.7rem 0.6rem;
+  background: var(--sticky-bg);
+  color: var(--sticky-fg);
+  border-radius: 2px;
+  box-shadow: 2px 4px 10px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s ease;
+}
+
+.sticky-notes .sticky-note:nth-child(3n+1) {
+  transform: rotate(-2.5deg);
+}
+
+.sticky-notes .sticky-note:nth-child(3n+2) {
+  transform: rotate(1.5deg);
+}
+
+.sticky-notes .sticky-note:nth-child(3n+3) {
+  transform: rotate(-1deg);
+}
+
+.sticky-note:hover {
+  transform: rotate(0deg) scale(1.03);
+  z-index: 1;
+}
+
+.sticky-note p {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  font-weight: 400;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.sticky-note-delete {
+  position: absolute;
+  top: 0.2rem;
+  right: 0.3rem;
+  background: transparent;
+  border: none;
+  color: var(--sticky-fg);
+  opacity: 0.5;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 0.1rem 0.3rem;
+}
+
+.sticky-note-delete:hover {
+  opacity: 1;
+}
+
+.sticky-note-add {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  background: transparent;
+  border: 1px dashed var(--border);
+  box-shadow: none;
+}
+
+.sticky-note-add textarea {
+  flex: 1;
+  resize: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: var(--fg);
+  font-size: 0.8rem;
+  min-height: 70px;
+}
+
+.sticky-note-add button {
+  align-self: flex-end;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.7rem;
 }

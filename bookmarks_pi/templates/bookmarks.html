@@ -235,6 +235,23 @@
     </details>
   </section>
 
+  <section class="sticky-notes-section" id="sticky-notes">
+    <div class="sticky-notes">
+      {% for note in sticky_notes %}
+      <div class="sticky-note">
+        <form method="post" action="/notes/{{ note['id'] }}/delete">
+          <button type="submit" class="sticky-note-delete" aria-label="Delete note">&times;</button>
+        </form>
+        <p>{{ note['content'] }}</p>
+      </div>
+      {% endfor %}
+      <form class="sticky-note sticky-note-add" method="post" action="/notes">
+        <textarea name="content" placeholder="New note..." required></textarea>
+        <button type="submit">Add note</button>
+      </form>
+    </div>
+  </section>
+
   <details class="calendar-settings" id="bookmarks-settings" {% if open_bookmarks %}open{% endif %}>
     <summary>Manage bookmarks</summary>
     <form class="bookmark-form" method="post" action="/bookmarks">
@@ -248,6 +265,30 @@
       <input placeholder="https://..." name="url" type="url" required />
       <button type="submit">Add bookmark</button>
     </form>
+  </details>
+
+  <details class="calendar-settings" id="documents-settings" {% if open_documents %}open{% endif %}>
+    <summary>Documents</summary>
+    <div class="calendar-manage">
+      <div class="manage-card">
+        <form class="calendar-form" method="post" action="/documents" enctype="multipart/form-data">
+          <input type="file" name="file" required />
+          <button type="submit">Upload</button>
+        </form>
+        <ul class="calendar-list">
+          {% for d in documents %}
+          <li>
+            <a href="/documents/{{ d['id'] }}" target="_blank" rel="noreferrer">{{ d['original_name'] }}</a>
+            <form method="post" action="/documents/{{ d['id'] }}/delete">
+              <button type="submit" class="delete-btn" aria-label="Delete {{ d['original_name'] }}">&times;</button>
+            </form>
+          </li>
+          {% else %}
+          <li class="empty">No documents yet.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
   </details>
 
   {% if error %}<p class="error">{{ error }}</p>{% endif %}
