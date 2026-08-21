@@ -9,7 +9,7 @@
   --vacation: #8ecae6;
   --rest: #a8d5a2;
   --holiday: #ff6b6b;
-  --task: #f4d35e;
+  --task: #e63946;
   --shift-morning: #c9b6e4;
   --shift-afternoon: #f4a261;
   --shift-night: #9a9a9a;
@@ -602,8 +602,12 @@ button:hover {
 }
 
 .task-marker {
-  color: var(--task);
-  font-weight: 700;
+  display: inline-block;
+  width: 0.42rem;
+  height: 0.42rem;
+  margin-left: 2px;
+  border-radius: 50%;
+  background: var(--task);
 }
 
 .calendar-legend-row {
@@ -700,11 +704,12 @@ button:hover {
   border-color: var(--fg);
 }
 
-.legend-asterisk {
-  color: var(--task);
-  font-weight: 700;
-  font-size: 1rem;
-  line-height: 1;
+.legend-task-dot {
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--task);
 }
 
 .calendar-settings {

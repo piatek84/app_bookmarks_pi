@@ -100,7 +100,7 @@
               <span
                 class="day{% if day.is_past %} past-day{% endif %}{% if day.is_today %} current-day{% endif %}{% if day.birthday_title %} birthday-day{% endif %}{% if day.holiday_title %} holiday-day{% endif %}{% if day.vacation_title %} vacation-day{% endif %}{% if day.is_rest_day %} rest-day{% endif %}{% if day.shift_block_type %} shift-{{ day.shift_block_type }}{% endif %}"
                 {% if day.hint %}title="{{ day.hint }}"{% endif %}
-              >{{ day.day }}{% if day.task_title %}<span class="task-marker">*</span>{% endif %}</span>
+              >{{ day.day }}{% if day.task_title %}<span class="task-marker"></span>{% endif %}</span>
               {% endif %}
             {% endfor %}
           {% endfor %}
@@ -121,7 +121,7 @@
         <span class="legend-item"><span class="legend-swatch shift-afternoon"></span>Afternoon shift</span>
         <span class="legend-item"><span class="legend-swatch shift-night"></span>Night shift</span>
         <span class="legend-item"><span class="legend-swatch current-day"></span>Today</span>
-        <span class="legend-item"><span class="legend-asterisk">*</span>Task</span>
+        <span class="legend-item"><span class="legend-task-dot"></span>Task</span>
       </div>
 
       <details class="calendar-settings" id="calendar-settings" {% if open_manage %}open{% endif %}>
