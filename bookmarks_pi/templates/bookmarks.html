@@ -36,7 +36,7 @@
         <button
           type="submit"
           class="icon-btn theme-icon-btn"
-          aria-label="{{ 'Switch to light mode' if theme == 'dark' else 'Switch to dark mode' }}"
+          aria-label="{{ {'dark': 'Switch to light mode', 'light': 'Switch to sepia mode', 'sepia': 'Switch to dark mode'}[theme] }}"
         >
           {% if theme == 'dark' %}
           <svg class="icon-sun" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -49,6 +49,10 @@
             <line x1="20" y1="12" x2="22" y2="12" />
             <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
             <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+          </svg>
+          {% elif theme == 'light' %}
+          <svg class="icon-sepia" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+            <path d="M12 2c-4 5-7 9-7 13a7 7 0 0 0 14 0c0-4-3-8-7-13z" />
           </svg>
           {% else %}
           <svg class="icon-moon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
@@ -331,9 +335,9 @@
           <input type="file" name="file" required />
           <button type="submit">Upload</button>
         </form>
-        <ul class="calendar-list">
+        <ul class="calendar-list document-list">
           {% for d in documents %}
-          <li>
+          <li data-id="{{ d['id'] }}">
             <a href="/documents/{{ d['id'] }}" target="_blank" rel="noreferrer">{{ d['original_name'] }}</a>
             <form method="post" action="/documents/{{ d['id'] }}/delete">
               <button type="submit" class="delete-btn" aria-label="Delete {{ d['original_name'] }}">&times;</button>

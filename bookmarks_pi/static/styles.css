@@ -26,6 +26,15 @@ html[data-theme="light"] {
   --border: #dcdde0;
 }
 
+html[data-theme="sepia"] {
+  color-scheme: light;
+  --bg: #f4ecd8;
+  --surface: #fbf3e1;
+  --fg: #4a3826;
+  --muted: #8a7256;
+  --border: #d9c9a3;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -428,6 +437,10 @@ button:hover {
 
 .icon-moon {
   color: var(--vacation);
+}
+
+.icon-sepia {
+  color: #a9744f;
 }
 
 .logout-icon-btn {
@@ -838,6 +851,14 @@ button:hover {
 .calendar-list li.empty {
   justify-content: center;
   color: var(--muted);
+}
+
+.document-list li:not(.empty) {
+  cursor: grab;
+}
+
+.document-list li.dragging {
+  opacity: 0.4;
 }
 
 /* Sticky notes */

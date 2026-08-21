@@ -12,7 +12,7 @@
 <body>
   {% block theme_toggle %}
   <form class="theme-toggle" method="post" action="/theme">
-    <button type="submit">{{ 'Light mode' if theme == 'dark' else 'Dark mode' }}</button>
+    <button type="submit">{{ {'dark': 'Light mode', 'light': 'Sepia mode', 'sepia': 'Dark mode'}[theme] }}</button>
   </form>
   {% endblock %}
   {% block content %}{% endblock %}

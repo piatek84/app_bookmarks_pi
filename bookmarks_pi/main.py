@@ -128,9 +128,14 @@ def logout(request: Request):
     return RedirectResponse("/", status_code=303)
 
 
+THEME_CYCLE = ["dark", "light", "sepia"]
+
+
 @app.post("/theme")
 def toggle_theme(request: Request):
-    request.session["theme"] = "light" if _current_theme(request) == "dark" else "dark"
+    current = _current_theme(request)
+    next_index = (THEME_CYCLE.index(current) + 1) % len(THEME_CYCLE) if current in THEME_CYCLE else 0
+    request.session["theme"] = THEME_CYCLE[next_index]
     destination = "/bookmarks" if _current_username(request) else "/"
     return RedirectResponse(destination, status_code=303)
 
@@ -537,6 +542,15 @@ def download_document(request: Request, document_id: int, conn=Depends(get_db)):
     if row is None:
         return RedirectResponse("/bookmarks", status_code=303)
     return FileResponse(_document_path(username, row["stored_name"]), filename=row["original_name"])
+
+
+@app.post("/documents/reorder")
+def reorder_documents(request: Request, id: list[int] = Form(...), conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    db.reorder_documents(conn, username, id)
+    return _redirect_to_bookmarks(open_documents=1, fragment="documents-settings")
 
 
 @app.post("/documents/{document_id}/delete")

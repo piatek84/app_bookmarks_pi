@@ -280,5 +280,22 @@
     }
   }
 
-  document.addEventListener("DOMContentLoaded", initGroups);
+  // Unlike initGroups (re-run after every AJAX swap, against a freshly
+  // replaced .bookmark-groups), the document list is never swapped -- its
+  // reorder falls back to a real form submit (see fallbackSubmit below), so
+  // the page fully reloads on drop. Binding this once on load avoids piling
+  // up duplicate listeners on the same persistent <ul> across swaps.
+  function initDocumentDrag() {
+    var documentList = document.querySelector("#documents-settings .document-list");
+    if (documentList) {
+      setupDragReorder(documentList, "li[data-id]", null, "id", function (order) {
+        fallbackSubmit("/documents/reorder", { id: order, open_documents: "1" });
+      });
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    initGroups();
+    initDocumentDrag();
+  });
 })();

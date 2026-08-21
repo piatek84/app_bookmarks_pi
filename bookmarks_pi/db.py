@@ -103,6 +103,7 @@ CREATE TABLE IF NOT EXISTS documents (
     stored_name TEXT NOT NULL,
     original_name TEXT NOT NULL,
     size INTEGER NOT NULL,
+    position INTEGER,
     created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_documents_owner ON documents (owner_username);
@@ -139,6 +140,10 @@ def _migrate(conn: sqlite3.Connection) -> None:
     shift_columns = {row[1] for row in conn.execute("PRAGMA table_info(work_shifts)").fetchall()}
     if "enabled" not in shift_columns:
         conn.execute("ALTER TABLE work_shifts ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1")
+
+    document_columns = {row[1] for row in conn.execute("PRAGMA table_info(documents)").fetchall()}
+    if "position" not in document_columns:
+        conn.execute("ALTER TABLE documents ADD COLUMN position INTEGER")
 
 
 def open_connection(database_path: str) -> sqlite3.Connection:
@@ -611,22 +616,58 @@ def delete_shift_block(conn: sqlite3.Connection, owner_username: str, block_star
     return cursor.rowcount > 0
 
 
+def _next_document_position(conn: sqlite3.Connection, owner_username: str) -> int:
+    max_position = conn.execute(
+        "SELECT COALESCE(MAX(position), -1) AS m FROM documents WHERE owner_username = ?",
+        (owner_username,),
+    ).fetchone()["m"]
+    return max_position + 1
+
+
 def create_document(
     conn: sqlite3.Connection, owner_username: str, stored_name: str, original_name: str, size: int
 ) -> sqlite3.Row:
+    position = _next_document_position(conn, owner_username)
     cursor = conn.execute(
-        "INSERT INTO documents (owner_username, stored_name, original_name, size, created_at) VALUES (?, ?, ?, ?, ?)",
-        (owner_username, stored_name, original_name, size, _now()),
+        "INSERT INTO documents (owner_username, stored_name, original_name, size, position, created_at) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (owner_username, stored_name, original_name, size, position, _now()),
     )
     conn.commit()
     return conn.execute("SELECT * FROM documents WHERE id = ?", (cursor.lastrowid,)).fetchone()
 
 
-def list_documents(conn: sqlite3.Connection, owner_username: str) -> list[sqlite3.Row]:
-    return conn.execute(
-        "SELECT * FROM documents WHERE owner_username = ? ORDER BY created_at DESC",
+def _sync_document_positions(conn: sqlite3.Connection, owner_username: str) -> None:
+    """Backfills positions for documents that predate the position column
+    (legacy data, disk-synced uploads), preserving their previous created_at-DESC order."""
+    rows = conn.execute(
+        "SELECT id FROM documents WHERE owner_username = ? AND position IS NULL ORDER BY created_at DESC",
         (owner_username,),
     ).fetchall()
+    if not rows:
+        return
+    next_position = _next_document_position(conn, owner_username)
+    for row in rows:
+        conn.execute("UPDATE documents SET position = ? WHERE id = ?", (next_position, row["id"]))
+        next_position += 1
+    conn.commit()
+
+
+def list_documents(conn: sqlite3.Connection, owner_username: str) -> list[sqlite3.Row]:
+    _sync_document_positions(conn, owner_username)
+    return conn.execute(
+        "SELECT * FROM documents WHERE owner_username = ? ORDER BY position ASC",
+        (owner_username,),
+    ).fetchall()
+
+
+def reorder_documents(conn: sqlite3.Connection, owner_username: str, ordered_ids: list[int]) -> None:
+    for index, document_id in enumerate(ordered_ids):
+        conn.execute(
+            "UPDATE documents SET position = ? WHERE id = ? AND owner_username = ?",
+            (index, document_id, owner_username),
+        )
+    conn.commit()
 
 
 def sync_documents_from_disk(conn: sqlite3.Connection, owner_username: str, user_dir: Path) -> None:
@@ -639,16 +680,18 @@ def sync_documents_from_disk(conn: sqlite3.Connection, owner_username: str, user
             "SELECT stored_name FROM documents WHERE owner_username = ?", (owner_username,)
         ).fetchall()
     }
+    next_position = _next_document_position(conn, owner_username)
     for entry in sorted(user_dir.iterdir()):
         if not entry.is_file() or entry.name.startswith(".") or entry.name in existing:
             continue
         stat = entry.stat()
         created_at = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat()
         conn.execute(
-            "INSERT INTO documents (owner_username, stored_name, original_name, size, created_at) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (owner_username, entry.name, entry.name, stat.st_size, created_at),
+            "INSERT INTO documents (owner_username, stored_name, original_name, size, position, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (owner_username, entry.name, entry.name, stat.st_size, next_position, created_at),
         )
+        next_position += 1
     conn.commit()
 
 
