@@ -964,13 +964,15 @@ button:hover {
   display: none;
 }
 
-.sticky-note-edit-form:target {
+.sticky-note-edit-form:target,
+.sticky-note-edit-form.editing {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
 }
 
-.sticky-note-edit-form:target + .sticky-note-view {
+.sticky-note-edit-form:target + .sticky-note-view,
+.sticky-note-edit-form.editing + .sticky-note-view {
   display: none;
 }
 

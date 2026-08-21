@@ -309,6 +309,32 @@
     if (details) details.open = false;
   });
 
+  // The sticky-note edit form defaults to the same href="#edit-note-N" +
+  // :target CSS trick as the bookmark modal, so it still works without JS.
+  // But unlike the modal (position:fixed, so navigating to it is a no-op for
+  // scroll), the form sits in normal document flow -- jumping the fragment
+  // scrolls it into view even though it's already on screen. With JS we skip
+  // the hash entirely and toggle an .editing class instead, which the CSS
+  // treats the same as :target but never triggers browser scroll-to-anchor.
+  // (history.pushState was tried first to update the fragment without
+  // scrolling, but :target doesn't re-evaluate on pushState/replaceState in
+  // Chrome -- only on a real navigation -- so it silently stopped matching.)
+  document.addEventListener("click", function (event) {
+    var editLink = event.target.closest(".sticky-note-edit");
+    if (editLink) {
+      event.preventDefault();
+      var form = document.getElementById(editLink.getAttribute("href").slice(1));
+      if (form) form.classList.add("editing");
+      return;
+    }
+    var cancelLink = event.target.closest(".sticky-note-edit-actions a");
+    if (cancelLink) {
+      event.preventDefault();
+      var editForm = cancelLink.closest(".sticky-note-edit-form");
+      if (editForm) editForm.classList.remove("editing");
+    }
+  });
+
   document.addEventListener("submit", function (event) {
     var form = event.target;
     if (!form.closest(".bookmark-groups, .notes-documents-row")) return;

@@ -36,7 +36,19 @@ def slugify(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text.strip().lower()).strip("-") or "category"
 
 
+def static_url(filename: str) -> str:
+    """Appends the file's mtime as a cache-busting query param, so an edit to
+    a static asset invalidates any browser cache on the next render instead
+    of requiring a manual hard refresh."""
+    try:
+        version = int((BASE_DIR / "static" / filename).stat().st_mtime)
+    except OSError:
+        version = 0
+    return f"/static/{filename}?v={version}"
+
+
 jinja_env.filters["slugify"] = slugify
+jinja_env.globals["static_url"] = static_url
 
 app = FastAPI(title="bookmarks-pi")
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
