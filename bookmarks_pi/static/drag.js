@@ -1,11 +1,12 @@
-/* Drag-and-drop reordering for bookmark categories and the bookmarks within
- * them, plus AJAX-ifying every bookmark-group form (edit/delete/move/reorder)
- * so saving doesn't do a full page navigation. A full reload was landing on
- * the right #anchor, but only after the browser painted the top of the page
- * first -- a visible jump. Fetching the updated markup and swapping just the
- * .bookmark-groups/.toast sections keeps the scroll position exactly where
- * it was. Every action still degrades to a real form submit (full reload) if
- * fetch fails or JS didn't load, since the server-rendered forms are real.
+/* Drag-and-drop reordering for bookmark categories/bookmarks and the document
+ * list, plus AJAX-ifying every form in .bookmark-groups and .notes-documents-row
+ * (bookmarks, documents, sticky notes) so saving doesn't do a full page
+ * navigation. A full reload was landing on the right #anchor, but only after
+ * the browser painted the top of the page first -- a visible jump. Fetching
+ * the updated markup and swapping just those sections plus .toast keeps the
+ * scroll position exactly where it was. Every action still degrades to a real
+ * form submit (full reload) if fetch fails or JS didn't load, since the
+ * server-rendered forms are real.
  */
 (function () {
   function isBeforeTarget(rect, x, y) {
@@ -17,6 +18,22 @@
     }
     // Roughly the same row (relevant for the categories grid): order by column.
     return x < midX;
+  }
+
+  // Nudges a scrollable container's own scrollbar (e.g. the document list's
+  // fixed-height overflow box) while the pointer hovers near its top/bottom
+  // edge during a drag, so items scrolled out of view can be reached as drop
+  // targets. No-ops on containers that don't actually scroll.
+  function autoScroll(container, y) {
+    var rect = container.getBoundingClientRect();
+    var edge = 32;
+    var maxScroll = container.scrollHeight - container.clientHeight;
+    if (maxScroll <= 0) return;
+    if (y - rect.top < edge) {
+      container.scrollTop = Math.max(0, container.scrollTop - 12);
+    } else if (rect.bottom - y < edge) {
+      container.scrollTop = Math.min(maxScroll, container.scrollTop + 12);
+    }
   }
 
   function closestItem(container, selector, dragEl, x, y) {
@@ -126,6 +143,7 @@
     container.addEventListener("dragover", function (event) {
       if (!dragEl) return;
       event.preventDefault();
+      autoScroll(container, event.clientY);
       var target = closestItem(container, selector, dragEl, event.clientX, event.clientY);
       if (!target) return;
       var rect = target.getBoundingClientRect();
@@ -203,6 +221,23 @@
     });
   }
 
+  // Generic <details id="..."> open-state preservation for a swapped region,
+  // keyed by id (unlike rememberOpenCategories, which is bookmark-specific
+  // and keyed by category name for its nested "show more" panels).
+  function rememberOpenDetails(root) {
+    var open = {};
+    root.querySelectorAll("details[id]").forEach(function (d) {
+      if (d.open) open[d.id] = true;
+    });
+    return open;
+  }
+
+  function applyOpenDetails(root, open) {
+    root.querySelectorAll("details[id]").forEach(function (d) {
+      if (open[d.id]) d.open = true;
+    });
+  }
+
   function swapFromHtml(html) {
     var doc = new DOMParser().parseFromString(html, "text/html");
     var openCategories = rememberOpenCategories();
@@ -214,6 +249,19 @@
       applyOpenCategories(openCategories);
     }
 
+    // Sticky notes + documents (upload/delete/reorder, add/edit/delete note)
+    // used to be plain form posts that fully reloaded the page -- jarring on
+    // a long document list or when editing a note further down. AJAX-ifying
+    // them (see the submit listener below) means swapping this region back
+    // in too, same as .bookmark-groups above.
+    var newRow = doc.querySelector(".notes-documents-row");
+    var oldRow = document.querySelector(".notes-documents-row");
+    if (newRow && oldRow) {
+      var openDetails = rememberOpenDetails(oldRow);
+      oldRow.replaceWith(newRow);
+      applyOpenDetails(newRow, openDetails);
+    }
+
     var newToast = doc.querySelector(".toast");
     var oldToast = document.querySelector(".toast");
     if (oldToast) oldToast.remove();
@@ -222,12 +270,14 @@
       if (h1) h1.insertAdjacentElement("afterend", newToast);
     }
 
-    // Clear any #edit-bookmark-N / #category-N hash left over from a plain
-    // <a href="#..."> so the (freshly replaced) modal doesn't reopen via
-    // :target, without triggering a scroll the way setting location.hash does.
+    // Clear any #edit-bookmark-N / #category-N / #edit-note-N hash left over
+    // from a plain <a href="#..."> so the (freshly replaced) modal doesn't
+    // reopen via :target, without triggering a scroll the way setting
+    // location.hash does.
     if (location.hash) history.replaceState(null, "", location.pathname + location.search);
 
     initGroups();
+    initDocumentDrag();
   }
 
   function submitAjax(action, fields) {
@@ -261,7 +311,7 @@
 
   document.addEventListener("submit", function (event) {
     var form = event.target;
-    if (!form.closest(".bookmark-groups")) return;
+    if (!form.closest(".bookmark-groups, .notes-documents-row")) return;
     event.preventDefault();
     var fields = fieldsFromForm(form);
     var group = form.closest(".bookmark-group[data-category]");
@@ -280,16 +330,13 @@
     }
   }
 
-  // Unlike initGroups (re-run after every AJAX swap, against a freshly
-  // replaced .bookmark-groups), the document list is never swapped -- its
-  // reorder falls back to a real form submit (see fallbackSubmit below), so
-  // the page fully reloads on drop. Binding this once on load avoids piling
-  // up duplicate listeners on the same persistent <ul> across swaps.
+  // Re-run after every AJAX swap, same as initGroups, since .notes-documents-row
+  // (which contains the document list) gets freshly replaced each time.
   function initDocumentDrag() {
     var documentList = document.querySelector("#documents-settings .document-list");
     if (documentList) {
       setupDragReorder(documentList, "li[data-id]", null, "id", function (order) {
-        fallbackSubmit("/documents/reorder", { id: order, open_documents: "1" });
+        submitAjax("/documents/reorder", { id: order, open_documents: "1" });
       });
     }
   }
