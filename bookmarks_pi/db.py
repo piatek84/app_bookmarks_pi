@@ -199,10 +199,22 @@ def _sync_category_positions(conn: sqlite3.Connection, owner_username: str) -> N
 
 
 def move_category(conn: sqlite3.Connection, owner_username: str, category: str, direction: int) -> None:
-    """direction: -1 moves the category earlier, +1 moves it later."""
+    """direction: -1 moves the category earlier, +1 moves it later.
+
+    Only considers categories that currently have at least one bookmark:
+    category_order keeps a row for every category ever used, even after its
+    last bookmark is deleted or recategorized, so ignoring that filter would
+    swap against invisible "ghost" categories and appear to do nothing.
+    """
     _sync_category_positions(conn, owner_username)
     rows = conn.execute(
-        "SELECT category, position FROM category_order WHERE owner_username = ? ORDER BY position",
+        """SELECT co.category, co.position FROM category_order co
+           WHERE co.owner_username = ?
+             AND EXISTS (
+                 SELECT 1 FROM bookmarks b
+                 WHERE b.owner_username = co.owner_username AND b.category = co.category
+             )
+           ORDER BY co.position""",
         (owner_username,),
     ).fetchall()
     categories = [row["category"] for row in rows]
