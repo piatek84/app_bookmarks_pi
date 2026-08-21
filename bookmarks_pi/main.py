@@ -152,6 +152,7 @@ def bookmarks_page(
     category: Optional[str] = None,
     name: Optional[str] = None,
     url: Optional[str] = None,
+    month_offset: int = 0,
 ):
     username = _current_username(request)
     if not username:
@@ -169,8 +170,10 @@ def bookmarks_page(
         bookmarks_by_category=db.list_bookmarks_grouped_by_category(conn, username),
         categories=db.list_categories(conn, username),
         calendar_months=calendar_service.build_calendar_months(
-            date.today(), NUM_CALENDAR_MONTHS, birthdays, vacations, shift_start, holidays, tasks
+            date.today(), NUM_CALENDAR_MONTHS, birthdays, vacations, shift_start, holidays, tasks,
+            months_offset=month_offset,
         ),
+        month_offset=month_offset,
         birthdays=birthdays,
         vacations=vacations,
         holidays=holidays,

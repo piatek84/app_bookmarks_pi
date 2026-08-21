@@ -30,6 +30,7 @@ def build_calendar_months(
     shift_start: Optional[str],
     holidays=(),
     tasks=(),
+    months_offset: int = 0,
 ) -> list[dict]:
     birthday_lookup = {(b["month"], b["day"]): b["title"] for b in birthdays}
     holiday_lookup = {(h["month"], h["day"]): h["title"] for h in holidays}
@@ -41,7 +42,7 @@ def build_calendar_months(
     shift_start_date = date.fromisoformat(shift_start) if shift_start else None
 
     months = []
-    first_of_month = date(today.year, today.month, 1)
+    first_of_month = _add_months(date(today.year, today.month, 1), months_offset)
     for i in range(num_months):
         months.append(
             _build_month(

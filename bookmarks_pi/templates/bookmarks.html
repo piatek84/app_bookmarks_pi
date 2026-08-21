@@ -79,9 +79,11 @@
   </div>
   {% endif %}
 
-  <section class="calendar-section">
-    <div class="calendar-row">
-      {% for month in calendar_months %}
+  <section class="calendar-section" id="calendar-section">
+    <div class="calendar-nav">
+      <a class="icon-btn calendar-arrow" href="/bookmarks?month_offset={{ month_offset - 1 }}#calendar-section" aria-label="Previous month">&larr;</a>
+      <div class="calendar-row">
+        {% for month in calendar_months %}
       <div class="calendar">
         <h3>{{ month.label }}</h3>
         <div class="days-row">
@@ -105,6 +107,8 @@
         </div>
       </div>
       {% endfor %}
+      </div>
+      <a class="icon-btn calendar-arrow" href="/bookmarks?month_offset={{ month_offset + 1 }}#calendar-section" aria-label="Next month">&rarr;</a>
     </div>
 
     <div class="calendar-legend-row">
