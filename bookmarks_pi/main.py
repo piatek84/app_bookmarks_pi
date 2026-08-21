@@ -161,6 +161,7 @@ def bookmarks_page(
     holidays = db.list_holidays(conn, username)
     tasks = db.list_tasks(conn, username)
     shift_start = db.get_work_shift_start(conn, username)
+    db.sync_documents_from_disk(conn, username, Path(settings.uploads_path) / username)
     return render(
         request,
         "bookmarks.html",

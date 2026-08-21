@@ -560,6 +560,29 @@ def list_documents(conn: sqlite3.Connection, owner_username: str) -> list[sqlite
     ).fetchall()
 
 
+def sync_documents_from_disk(conn: sqlite3.Connection, owner_username: str, user_dir: Path) -> None:
+    """Register files dropped into the user's upload folder outside the app (e.g. via SSH/Samba)."""
+    if not user_dir.is_dir():
+        return
+    existing = {
+        row["stored_name"]
+        for row in conn.execute(
+            "SELECT stored_name FROM documents WHERE owner_username = ?", (owner_username,)
+        ).fetchall()
+    }
+    for entry in sorted(user_dir.iterdir()):
+        if not entry.is_file() or entry.name.startswith(".") or entry.name in existing:
+            continue
+        stat = entry.stat()
+        created_at = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat()
+        conn.execute(
+            "INSERT INTO documents (owner_username, stored_name, original_name, size, created_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (owner_username, entry.name, entry.name, stat.st_size, created_at),
+        )
+    conn.commit()
+
+
 def get_document(conn: sqlite3.Connection, owner_username: str, document_id: int) -> Optional[sqlite3.Row]:
     return conn.execute(
         "SELECT * FROM documents WHERE id = ? AND owner_username = ?",
