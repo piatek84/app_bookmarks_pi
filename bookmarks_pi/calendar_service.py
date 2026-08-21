@@ -2,7 +2,7 @@
 today/past, birthdays, vacations, or work-shift rest days.
 """
 import calendar as stdlib_calendar
-from datetime import date, timedelta
+from datetime import date
 from typing import Optional
 
 WORK_DAYS = 6
@@ -43,42 +43,36 @@ def build_calendar_months(
 
     months = []
     first_of_month = _add_months(date(today.year, today.month, 1), months_offset)
-    cursor = first_of_month
     for i in range(num_months):
-        month_dict, cursor = _build_month(
-            _add_months(first_of_month, i),
-            cursor,
-            today,
-            birthday_lookup,
-            holiday_lookup,
-            vacation_ranges,
-            shift_start_date,
-            task_lookup,
+        months.append(
+            _build_month(
+                _add_months(first_of_month, i),
+                today,
+                birthday_lookup,
+                holiday_lookup,
+                vacation_ranges,
+                shift_start_date,
+                task_lookup,
+            )
         )
-        months.append(month_dict)
     return months
 
 
 def _build_month(
     first_day: date,
-    start_date: date,
     today: date,
     birthday_lookup,
     holiday_lookup,
     vacation_ranges,
     shift_start: Optional[date],
     task_lookup,
-) -> tuple[dict, date]:
-    """Builds one month card starting from `start_date` (>= first_day, e.g. when the
-    previous card's last week already ran into this month). Weeks are always complete:
-    if the month's last week doesn't end on a Sunday, it's filled with the following
-    month's opening days instead of blank cells, and the date those days stopped at is
-    returned so the next card can pick up right after them.
-    """
+) -> dict:
     days_in_month = stdlib_calendar.monthrange(first_day.year, first_day.month)[1]
-    month_end = date(first_day.year, first_day.month, days_in_month)
+    weeks: list[list[Optional[dict]]] = []
+    week: list[Optional[dict]] = [None] * first_day.weekday()
 
-    def build_day(current: date) -> dict:
+    for day_num in range(1, days_in_month + 1):
+        current = date(first_day.year, first_day.month, day_num)
         is_future_or_today = current >= today
         birthday_title = birthday_lookup.get((current.month, current.day)) if is_future_or_today else None
         holiday_title = holiday_lookup.get((current.month, current.day)) if is_future_or_today else None
@@ -105,36 +99,25 @@ def _build_month(
         if task_title:
             hint_parts.append(f"Task: {task_title}")
 
-        return {
-            "day": current.day,
-            "is_today": current == today,
-            "is_past": current < today,
-            "birthday_title": birthday_title,
-            "holiday_title": holiday_title,
-            "vacation_title": vacation_title,
-            "is_rest_day": is_rest_day,
-            "task_title": task_title,
-            "hint": "\n".join(hint_parts) if hint_parts else None,
-        }
-
-    weeks: list[list[Optional[dict]]] = []
-    week: list[Optional[dict]] = [None] * start_date.weekday()
-
-    current = start_date
-    while current <= month_end:
-        week.append(build_day(current))
+        week.append(
+            {
+                "day": day_num,
+                "is_today": current == today,
+                "is_past": current < today,
+                "birthday_title": birthday_title,
+                "holiday_title": holiday_title,
+                "vacation_title": vacation_title,
+                "is_rest_day": is_rest_day,
+                "task_title": task_title,
+                "hint": "\n".join(hint_parts) if hint_parts else None,
+            }
+        )
         if len(week) == 7:
             weeks.append(week)
             week = []
-        current += timedelta(days=1)
 
-    next_start = _add_months(date(first_day.year, first_day.month, 1), 1)
     if week:
-        overflow = next_start
-        while len(week) < 7:
-            week.append(build_day(overflow))
-            overflow += timedelta(days=1)
+        week.extend([None] * (7 - len(week)))
         weeks.append(week)
-        next_start = overflow
 
-    return {"label": first_day.strftime("%B %Y"), "weeks": weeks}, next_start
+    return {"label": first_day.strftime("%B %Y"), "weeks": weeks}
