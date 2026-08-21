@@ -287,25 +287,21 @@
     <div class="sticky-notes">
       {% for note in sticky_notes %}
       <div class="sticky-note">
-        <div class="sticky-note-actions">
-          <a href="#edit-note-{{ note['id'] }}" class="sticky-note-edit" aria-label="Edit note"><span class="edit-icon">&#9998;</span></a>
-          <form method="post" action="/notes/{{ note['id'] }}/delete">
-            <button type="submit" class="sticky-note-delete" aria-label="Delete note">&times;</button>
-          </form>
-        </div>
-        <p>{{ note['content'] }}</p>
-      </div>
-      <div id="edit-note-{{ note['id'] }}" class="modal-overlay">
-        <a href="#" class="modal-backdrop" aria-label="Close"></a>
-        <div class="modal">
-          <h2>Edit note</h2>
-          <form method="post" action="/notes/{{ note['id'] }}/edit">
-            <textarea name="content" required>{{ note['content'] }}</textarea>
-            <div class="modal-actions">
-              <a href="#" class="cancel-btn">Cancel</a>
-              <button type="submit">Save</button>
-            </div>
-          </form>
+        <form class="sticky-note-edit-form" id="edit-note-{{ note['id'] }}" method="post" action="/notes/{{ note['id'] }}/edit">
+          <textarea name="content" required>{{ note['content'] }}</textarea>
+          <div class="sticky-note-edit-actions">
+            <a href="#">Cancel</a>
+            <button type="submit">Save</button>
+          </div>
+        </form>
+        <div class="sticky-note-view">
+          <div class="sticky-note-actions">
+            <a href="#edit-note-{{ note['id'] }}" class="sticky-note-edit" aria-label="Edit note"><span class="edit-icon">&#9998;</span></a>
+            <form method="post" action="/notes/{{ note['id'] }}/delete">
+              <button type="submit" class="sticky-note-delete" aria-label="Delete note">&times;</button>
+            </form>
+          </div>
+          <p>{{ note['content'] }}</p>
         </div>
       </div>
       {% endfor %}
