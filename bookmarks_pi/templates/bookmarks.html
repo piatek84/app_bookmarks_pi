@@ -81,7 +81,7 @@
 
   <section class="calendar-section" id="calendar-section">
     <div class="calendar-nav">
-      <a class="icon-btn calendar-arrow" href="/bookmarks?month_offset={{ month_offset - 1 }}" aria-label="Previous month"><span class="arrow-tip arrow-tip-left"></span></a>
+      <a class="icon-btn calendar-arrow calendar-arrow-prev" href="/bookmarks?month_offset={{ month_offset - 1 }}" aria-label="Previous month"><span class="arrow-tip arrow-tip-left"></span></a>
       <div class="calendar-row">
         {% for month in calendar_months %}
       <div class="calendar">
@@ -108,7 +108,7 @@
       </div>
       {% endfor %}
       </div>
-      <a class="icon-btn calendar-arrow" href="/bookmarks?month_offset={{ month_offset + 1 }}" aria-label="Next month"><span class="arrow-tip arrow-tip-right"></span></a>
+      <a class="icon-btn calendar-arrow calendar-arrow-next" href="/bookmarks?month_offset={{ month_offset + 1 }}" aria-label="Next month"><span class="arrow-tip arrow-tip-right"></span></a>
     </div>
 
     <div class="calendar-legend-row">
