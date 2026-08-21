@@ -620,6 +620,10 @@ button:hover {
   margin-top: 1rem;
 }
 
+.sticky-notes-section + .calendar-settings {
+  margin-top: 2.5rem;
+}
+
 .calendar-settings summary {
   cursor: pointer;
   list-style: none;

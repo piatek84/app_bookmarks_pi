@@ -236,6 +236,7 @@
   </section>
 
   <section class="sticky-notes-section" id="sticky-notes">
+    {% if sticky_notes %}
     <div class="sticky-notes">
       {% for note in sticky_notes %}
       <div class="sticky-note">
@@ -250,6 +251,19 @@
         <button type="submit">Add note</button>
       </form>
     </div>
+    {% else %}
+    <details class="calendar-settings" id="sticky-notes-settings">
+      <summary>Manage sticky notes</summary>
+      <div class="calendar-manage">
+        <div class="manage-card">
+          <form class="calendar-form" method="post" action="/notes">
+            <textarea name="content" placeholder="New note..." required></textarea>
+            <button type="submit">Add note</button>
+          </form>
+        </div>
+      </div>
+    </details>
+    {% endif %}
   </section>
 
   <details class="calendar-settings" id="bookmarks-settings" {% if open_bookmarks %}open{% endif %}>
@@ -268,7 +282,7 @@
   </details>
 
   <details class="calendar-settings" id="documents-settings" {% if open_documents %}open{% endif %}>
-    <summary>Documents</summary>
+    <summary>Manage documents</summary>
     <div class="calendar-manage">
       <div class="manage-card">
         <form class="calendar-form" method="post" action="/documents" enctype="multipart/form-data">
