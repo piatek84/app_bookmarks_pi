@@ -254,8 +254,8 @@
     {% else %}
     <details class="calendar-settings" id="sticky-notes-settings">
       <summary>Manage sticky notes</summary>
-      <div class="calendar-manage">
-        <form class="sticky-note-add-standalone" method="post" action="/notes">
+      <div class="sticky-notes">
+        <form class="sticky-note sticky-note-add" method="post" action="/notes">
           <textarea name="content" placeholder="New note..." required></textarea>
           <button type="submit">Add note</button>
         </form>

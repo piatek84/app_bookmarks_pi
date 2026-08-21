@@ -620,10 +620,6 @@ button:hover {
   margin-top: 1rem;
 }
 
-.sticky-notes-section + .calendar-settings {
-  margin-top: 2.5rem;
-}
-
 .calendar-settings summary {
   cursor: pointer;
   list-style: none;
@@ -821,36 +817,11 @@ button:hover {
 
 .sticky-note-add button {
   align-self: flex-end;
-  padding: 0.35rem 0.6rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
   font-size: 0.7rem;
 }
 
-.sticky-note-add-standalone {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  width: min(320px, 100%);
-  min-height: 260px;
-  padding: 1.25rem;
-  background: transparent;
-  border: 1px dashed var(--border);
-  border-radius: 10px;
-  box-shadow: none;
-}
-
-.sticky-note-add-standalone textarea {
-  flex: 1;
-  resize: none;
-  border: none;
-  background: transparent;
-  padding: 0;
-  color: var(--fg);
-  font-size: 0.9rem;
-}
-
-.sticky-note-add-standalone button {
-  align-self: flex-end;
-  padding: 0.6rem 1.4rem;
-  border-radius: 999px;
-  font-size: 0.8rem;
+#sticky-notes-settings .sticky-notes {
+  margin-top: 0.75rem;
 }
