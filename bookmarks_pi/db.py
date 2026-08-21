@@ -178,7 +178,10 @@ def _ensure_category_position(conn: sqlite3.Connection, owner_username: str, cat
 
 def _sync_category_positions(conn: sqlite3.Connection, owner_username: str) -> None:
     """Backfills positions for categories that predate this table (legacy data,
-    imports) so they still show up, appended in alphabetical order."""
+    imports) so they still show up, appended in alphabetical order. Also drops
+    stale rows for categories that no longer have any bookmark (deleted,
+    renamed, or a stray leftover from a typo) so they don't keep cluttering
+    the order forever."""
     known = {
         row["category"]
         for row in conn.execute(
@@ -195,6 +198,14 @@ def _sync_category_positions(conn: sqlite3.Connection, owner_username: str) -> N
     for category in all_categories:
         if category not in known:
             _ensure_category_position(conn, owner_username, category)
+    conn.execute(
+        """DELETE FROM category_order
+           WHERE owner_username = ?
+             AND category NOT IN (
+                 SELECT DISTINCT category FROM bookmarks WHERE owner_username = ?
+             )""",
+        (owner_username, owner_username),
+    )
     conn.commit()
 
 
