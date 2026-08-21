@@ -98,7 +98,7 @@
               <span class="day"></span>
               {% else %}
               <span
-                class="day{% if day.is_past %} past-day{% endif %}{% if day.is_today %} current-day{% endif %}{% if day.birthday_title %} birthday-day{% endif %}{% if day.holiday_title %} holiday-day{% endif %}{% if day.vacation_title %} vacation-day{% endif %}{% if day.is_rest_day %} rest-day{% endif %}"
+                class="day{% if day.is_past %} past-day{% endif %}{% if day.is_today %} current-day{% endif %}{% if day.birthday_title %} birthday-day{% endif %}{% if day.holiday_title %} holiday-day{% endif %}{% if day.vacation_title %} vacation-day{% endif %}{% if day.is_rest_day %} rest-day{% endif %}{% if day.weekly_shift_type %} shift-{{ day.weekly_shift_type }}{% endif %}"
                 {% if day.hint %}title="{{ day.hint }}"{% endif %}
               >{{ day.day }}{% if day.task_title %}<span class="task-marker">*</span>{% endif %}</span>
               {% endif %}
@@ -117,6 +117,9 @@
         <span class="legend-item"><span class="legend-swatch holiday-day"></span>Holiday</span>
         <span class="legend-item"><span class="legend-swatch vacation-day"></span>Vacation</span>
         <span class="legend-item"><span class="legend-swatch rest-day"></span>Rest day</span>
+        <span class="legend-item"><span class="legend-swatch shift-morning"></span>Morning shift</span>
+        <span class="legend-item"><span class="legend-swatch shift-afternoon"></span>Afternoon shift</span>
+        <span class="legend-item"><span class="legend-swatch shift-night"></span>Night shift</span>
         <span class="legend-item"><span class="legend-swatch current-day"></span>Today</span>
         <span class="legend-item"><span class="legend-asterisk">*</span>Task</span>
       </div>
@@ -231,10 +234,44 @@
           <form class="calendar-form" method="post" action="/calendar/shift">
             <label>
               Cycle start date (a work day)
-              <input name="start_date" type="date" value="{{ shift_start or '' }}" required />
+              <input name="start_date" type="date" value="{{ work_shift['start_date'] if work_shift else '' }}" required />
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="enabled" {% if not work_shift or work_shift['enabled'] %}checked{% endif %} />
+              Enabled
             </label>
             <button type="submit">Save</button>
           </form>
+        </div>
+
+        <div class="manage-card">
+          <h2>Weekly shift</h2>
+          <p class="hint">Tag a specific week as morning, afternoon or night when it doesn't follow the automatic cycle.</p>
+          <form class="calendar-form" method="post" action="/calendar/weekly-shifts">
+            <label>
+              Any day in the week
+              <input name="week_date" type="date" required />
+            </label>
+            <select name="shift_type" required>
+              <option value="" selected disabled>Shift</option>
+              <option value="morning">Morning</option>
+              <option value="afternoon">Afternoon</option>
+              <option value="night">Night</option>
+            </select>
+            <button type="submit">Save</button>
+          </form>
+          <ul class="calendar-list">
+            {% for w in weekly_shifts %}
+            <li>
+              <span>Week of {{ w['week_start'] }} - {{ w['shift_type']|capitalize }}</span>
+              <form method="post" action="/calendar/weekly-shifts/{{ w['week_start'] }}/delete">
+                <button type="submit" class="delete-btn" aria-label="Delete weekly shift for week of {{ w['week_start'] }}">&times;</button>
+              </form>
+            </li>
+            {% else %}
+            <li class="empty">No weekly shifts set.</li>
+            {% endfor %}
+          </ul>
         </div>
       </div>
       </details>

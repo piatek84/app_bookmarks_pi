@@ -10,6 +10,9 @@
   --rest: #c9b6e4;
   --holiday: #ff6b6b;
   --task: #f4d35e;
+  --shift-morning: #a8d5a2;
+  --shift-afternoon: #7cb9e8;
+  --shift-night: #5b5f97;
   --sticky-bg: #fdea6b;
   --sticky-fg: #3a3216;
 }
@@ -564,6 +567,21 @@ button:hover {
   box-shadow: inset 0 -2px 0 var(--rest);
 }
 
+.shift-morning {
+  background: color-mix(in srgb, var(--shift-morning) 32%, transparent);
+  box-shadow: inset 0 -2px 0 var(--shift-morning);
+}
+
+.shift-afternoon {
+  background: color-mix(in srgb, var(--shift-afternoon) 32%, transparent);
+  box-shadow: inset 0 -2px 0 var(--shift-afternoon);
+}
+
+.shift-night {
+  background: color-mix(in srgb, var(--shift-night) 32%, transparent);
+  box-shadow: inset 0 -2px 0 var(--shift-night);
+}
+
 .holiday-day {
   color: var(--holiday);
   font-weight: 700;
@@ -644,6 +662,24 @@ button:hover {
 .legend-swatch.rest-day {
   background: color-mix(in srgb, var(--rest) 32%, transparent);
   box-shadow: inset 0 -2px 0 var(--rest);
+  border-color: transparent;
+}
+
+.legend-swatch.shift-morning {
+  background: color-mix(in srgb, var(--shift-morning) 32%, transparent);
+  box-shadow: inset 0 -2px 0 var(--shift-morning);
+  border-color: transparent;
+}
+
+.legend-swatch.shift-afternoon {
+  background: color-mix(in srgb, var(--shift-afternoon) 32%, transparent);
+  box-shadow: inset 0 -2px 0 var(--shift-afternoon);
+  border-color: transparent;
+}
+
+.legend-swatch.shift-night {
+  background: color-mix(in srgb, var(--shift-night) 32%, transparent);
+  box-shadow: inset 0 -2px 0 var(--shift-night);
   border-color: transparent;
 }
 
@@ -732,6 +768,16 @@ button:hover {
 .date-fields {
   display: flex;
   gap: 0.5rem;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.checkbox-label input {
+  width: auto;
 }
 
 .date-fields input {

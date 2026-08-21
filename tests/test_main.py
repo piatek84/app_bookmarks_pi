@@ -16,7 +16,7 @@ from starlette.testclient import TestClient
 
 from bookmarks_pi import db, main
 
-TABLES = ["users", "login_codes", "bookmarks", "birthdays", "vacations", "holidays", "tasks", "work_shifts", "category_order"]
+TABLES = ["users", "login_codes", "bookmarks", "birthdays", "vacations", "holidays", "tasks", "work_shifts", "weekly_shifts", "category_order"]
 
 
 @pytest.fixture
@@ -343,3 +343,46 @@ def test_moving_a_category_redirects_to_its_own_anchor(client):
     r = client.post("/bookmarks/categories/move", data={"category": "sports", "direction": "up"}, follow_redirects=False)
     assert r.status_code == 303
     assert r.headers["location"].endswith("#category-sports")
+
+
+def test_work_shift_can_be_saved_enabled_and_disabled(client):
+    r = client.post("/calendar/shift", data={"start_date": "2026-01-01", "enabled": "on"})
+    assert r.status_code == 200
+    conn = db.open_connection(main.settings.database_path)
+    row = db.get_work_shift(conn, "juan")
+    conn.close()
+    assert row["start_date"] == "2026-01-01"
+    assert row["enabled"] == 1
+
+    # Unchecking the box (browsers omit the field entirely) disables the cycle.
+    r = client.post("/calendar/shift", data={"start_date": "2026-01-01"})
+    assert r.status_code == 200
+    conn = db.open_connection(main.settings.database_path)
+    row = db.get_work_shift(conn, "juan")
+    conn.close()
+    assert row["enabled"] == 0
+
+
+def test_adding_a_weekly_shift_shows_it_in_the_manage_panel(client):
+    r = client.post("/calendar/weekly-shifts", data={"week_date": "2026-01-20", "shift_type": "afternoon"})
+    assert r.status_code == 200
+    assert 'id="calendar-settings" open' in r.text
+    assert "Week of 2026-01-19 - Afternoon" in r.text
+
+    conn = db.open_connection(main.settings.database_path)
+    shifts = db.list_weekly_shifts(conn, "juan")
+    conn.close()
+    assert len(shifts) == 1
+    assert shifts[0]["week_start"] == "2026-01-19"
+
+
+def test_deleting_a_weekly_shift_removes_it(client):
+    client.post("/calendar/weekly-shifts", data={"week_date": "2026-01-20", "shift_type": "night"})
+
+    r = client.post("/calendar/weekly-shifts/2026-01-19/delete")
+    assert r.status_code == 200
+    assert "No weekly shifts set." in r.text
+
+    conn = db.open_connection(main.settings.database_path)
+    assert db.list_weekly_shifts(conn, "juan") == []
+    conn.close()

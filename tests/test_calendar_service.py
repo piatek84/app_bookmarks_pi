@@ -46,6 +46,15 @@ def test_work_shift_cycle_is_six_on_three_off():
     assert rest_days[:3] == [7, 8, 9]
 
 
+def test_weekly_shift_marks_days_in_that_week():
+    weekly_shifts = [{"week_start": "2026-01-19", "shift_type": "afternoon"}]
+    months = calendar_service.build_calendar_months(
+        date(2026, 1, 15), 1, [], [], None, weekly_shifts=weekly_shifts
+    )
+    assert _find_day(months, 20)["weekly_shift_type"] == "afternoon"
+    assert _find_day(months, 10)["weekly_shift_type"] is None
+
+
 def test_past_days_are_not_marked():
     birthdays = [{"month": 1, "day": 10, "title": "Alex"}]
     months = calendar_service.build_calendar_months(date(2026, 1, 15), 1, birthdays, [], "2026-01-01")

@@ -58,8 +58,18 @@ CREATE INDEX IF NOT EXISTS idx_vacations_owner ON vacations (owner_username);
 
 CREATE TABLE IF NOT EXISTS work_shifts (
     owner_username TEXT PRIMARY KEY,
-    start_date TEXT NOT NULL
+    start_date TEXT NOT NULL,
+    enabled INTEGER NOT NULL DEFAULT 1
 );
+
+CREATE TABLE IF NOT EXISTS weekly_shifts (
+    owner_username TEXT NOT NULL,
+    week_start TEXT NOT NULL,
+    shift_type TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (owner_username, week_start)
+);
+CREATE INDEX IF NOT EXISTS idx_weekly_shifts_owner ON weekly_shifts (owner_username);
 
 CREATE TABLE IF NOT EXISTS holidays (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -125,6 +135,10 @@ def _migrate(conn: sqlite3.Connection) -> None:
     columns = {row[1] for row in conn.execute("PRAGMA table_info(bookmarks)").fetchall()}
     if "position" not in columns:
         conn.execute("ALTER TABLE bookmarks ADD COLUMN position INTEGER")
+
+    shift_columns = {row[1] for row in conn.execute("PRAGMA table_info(work_shifts)").fetchall()}
+    if "enabled" not in shift_columns:
+        conn.execute("ALTER TABLE work_shifts ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1")
 
 
 def open_connection(database_path: str) -> sqlite3.Connection:
@@ -533,13 +547,45 @@ def delete_task(conn: sqlite3.Connection, owner_username: str, task_id: int) -> 
     return cursor.rowcount > 0
 
 
-def set_work_shift_start(conn: sqlite3.Connection, owner_username: str, start_date: str) -> None:
+def set_work_shift(conn: sqlite3.Connection, owner_username: str, start_date: str, enabled: bool) -> None:
     conn.execute(
-        """INSERT INTO work_shifts (owner_username, start_date) VALUES (?, ?)
-           ON CONFLICT(owner_username) DO UPDATE SET start_date = excluded.start_date""",
-        (owner_username, start_date),
+        """INSERT INTO work_shifts (owner_username, start_date, enabled) VALUES (?, ?, ?)
+           ON CONFLICT(owner_username) DO UPDATE SET start_date = excluded.start_date, enabled = excluded.enabled""",
+        (owner_username, start_date, 1 if enabled else 0),
     )
     conn.commit()
+
+
+WEEKLY_SHIFT_TYPES = ("morning", "afternoon", "night")
+
+
+def set_weekly_shift(conn: sqlite3.Connection, owner_username: str, week_start: str, shift_type: str) -> sqlite3.Row:
+    conn.execute(
+        """INSERT INTO weekly_shifts (owner_username, week_start, shift_type, created_at) VALUES (?, ?, ?, ?)
+           ON CONFLICT(owner_username, week_start) DO UPDATE SET shift_type = excluded.shift_type""",
+        (owner_username, week_start, shift_type, _now()),
+    )
+    conn.commit()
+    return conn.execute(
+        "SELECT * FROM weekly_shifts WHERE owner_username = ? AND week_start = ?",
+        (owner_username, week_start),
+    ).fetchone()
+
+
+def list_weekly_shifts(conn: sqlite3.Connection, owner_username: str) -> list[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM weekly_shifts WHERE owner_username = ? ORDER BY week_start",
+        (owner_username,),
+    ).fetchall()
+
+
+def delete_weekly_shift(conn: sqlite3.Connection, owner_username: str, week_start: str) -> bool:
+    cursor = conn.execute(
+        "DELETE FROM weekly_shifts WHERE owner_username = ? AND week_start = ?",
+        (owner_username, week_start),
+    )
+    conn.commit()
+    return cursor.rowcount > 0
 
 
 def create_document(
@@ -633,9 +679,8 @@ def delete_sticky_note(conn: sqlite3.Connection, owner_username: str, note_id: i
     return cursor.rowcount > 0
 
 
-def get_work_shift_start(conn: sqlite3.Connection, owner_username: str) -> Optional[str]:
-    row = conn.execute(
-        "SELECT start_date FROM work_shifts WHERE owner_username = ?",
+def get_work_shift(conn: sqlite3.Connection, owner_username: str) -> Optional[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM work_shifts WHERE owner_username = ?",
         (owner_username,),
     ).fetchone()
-    return row["start_date"] if row else None

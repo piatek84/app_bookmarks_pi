@@ -161,7 +161,9 @@ def bookmarks_page(
     vacations = db.list_vacations(conn, username)
     holidays = db.list_holidays(conn, username)
     tasks = db.list_tasks(conn, username)
-    shift_start = db.get_work_shift_start(conn, username)
+    work_shift = db.get_work_shift(conn, username)
+    shift_start = work_shift["start_date"] if work_shift and work_shift["enabled"] else None
+    weekly_shifts = db.list_weekly_shifts(conn, username)
     db.sync_documents_from_disk(conn, username, Path(settings.uploads_path) / username)
     return render(
         request,
@@ -171,14 +173,15 @@ def bookmarks_page(
         categories=db.list_categories(conn, username),
         calendar_months=calendar_service.build_calendar_months(
             date.today(), NUM_CALENDAR_MONTHS, birthdays, vacations, shift_start, holidays, tasks,
-            months_offset=month_offset,
+            months_offset=month_offset, weekly_shifts=weekly_shifts,
         ),
         month_offset=month_offset,
         birthdays=birthdays,
         vacations=vacations,
         holidays=holidays,
         tasks=tasks,
-        shift_start=shift_start,
+        work_shift=work_shift,
+        weekly_shifts=weekly_shifts,
         documents=db.list_documents(conn, username),
         sticky_notes=db.list_sticky_notes(conn, username),
         open_manage=bool(open_manage),
@@ -336,11 +339,41 @@ def restore_vacation(
 
 
 @app.post("/calendar/shift")
-def set_shift(request: Request, start_date: str = Form(...), conn=Depends(get_db)):
+def set_shift(
+    request: Request,
+    start_date: str = Form(...),
+    enabled: Optional[str] = Form(None),
+    conn=Depends(get_db),
+):
     username = _current_username(request)
     if not username:
         return RedirectResponse("/", status_code=303)
-    db.set_work_shift_start(conn, username, start_date)
+    db.set_work_shift(conn, username, start_date, enabled=bool(enabled))
+    return _redirect_to_bookmarks(open_manage=1, fragment="calendar-settings")
+
+
+@app.post("/calendar/weekly-shifts")
+def add_weekly_shift(
+    request: Request,
+    week_date: str = Form(...),
+    shift_type: str = Form(...),
+    conn=Depends(get_db),
+):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    if shift_type in db.WEEKLY_SHIFT_TYPES:
+        week_start = date.fromisocalendar(*date.fromisoformat(week_date).isocalendar()[:2], 1)
+        db.set_weekly_shift(conn, username, week_start.isoformat(), shift_type)
+    return _redirect_to_bookmarks(open_manage=1, fragment="calendar-settings")
+
+
+@app.post("/calendar/weekly-shifts/{week_start}/delete")
+def delete_weekly_shift(request: Request, week_start: str, conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    db.delete_weekly_shift(conn, username, week_start)
     return _redirect_to_bookmarks(open_manage=1, fragment="calendar-settings")
 
 

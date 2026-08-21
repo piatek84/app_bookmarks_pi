@@ -278,10 +278,34 @@ def test_getters_for_undo_return_none_when_not_owner(conn):
     assert db.get_vacation(conn, "other", vacation["id"]) is None
 
 
-def test_work_shift_start_upsert_and_scoping(conn):
-    assert db.get_work_shift_start(conn, "juan") is None
-    db.set_work_shift_start(conn, "juan", "2026-01-01")
-    assert db.get_work_shift_start(conn, "juan") == "2026-01-01"
-    db.set_work_shift_start(conn, "juan", "2026-02-01")
-    assert db.get_work_shift_start(conn, "juan") == "2026-02-01"
-    assert db.get_work_shift_start(conn, "other") is None
+def test_work_shift_upsert_and_scoping(conn):
+    assert db.get_work_shift(conn, "juan") is None
+    db.set_work_shift(conn, "juan", "2026-01-01", enabled=True)
+    row = db.get_work_shift(conn, "juan")
+    assert row["start_date"] == "2026-01-01"
+    assert row["enabled"] == 1
+    db.set_work_shift(conn, "juan", "2026-02-01", enabled=False)
+    row = db.get_work_shift(conn, "juan")
+    assert row["start_date"] == "2026-02-01"
+    assert row["enabled"] == 0
+    assert db.get_work_shift(conn, "other") is None
+
+
+def test_weekly_shift_upsert_list_and_delete(conn):
+    assert db.list_weekly_shifts(conn, "juan") == []
+    db.set_weekly_shift(conn, "juan", "2026-08-24", "morning")
+    shifts = db.list_weekly_shifts(conn, "juan")
+    assert len(shifts) == 1
+    assert shifts[0]["week_start"] == "2026-08-24"
+    assert shifts[0]["shift_type"] == "morning"
+
+    db.set_weekly_shift(conn, "juan", "2026-08-24", "night")
+    shifts = db.list_weekly_shifts(conn, "juan")
+    assert len(shifts) == 1
+    assert shifts[0]["shift_type"] == "night"
+
+    assert db.list_weekly_shifts(conn, "other") == []
+
+    assert db.delete_weekly_shift(conn, "juan", "2026-08-24") is True
+    assert db.list_weekly_shifts(conn, "juan") == []
+    assert db.delete_weekly_shift(conn, "juan", "2026-08-24") is False
