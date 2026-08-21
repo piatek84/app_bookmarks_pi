@@ -6,7 +6,7 @@ import shutil
 import sqlite3
 import urllib.parse
 import uuid
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Iterator, Optional
 
@@ -163,7 +163,14 @@ def bookmarks_page(
     tasks = db.list_tasks(conn, username)
     work_shift = db.get_work_shift(conn, username)
     shift_start = work_shift["start_date"] if work_shift and work_shift["enabled"] else None
-    weekly_shifts = db.list_weekly_shifts(conn, username)
+    shift_blocks = db.list_shift_blocks(conn, username)
+    shift_blocks_view = [
+        {
+            **dict(b),
+            "block_end": (date.fromisoformat(b["block_start"]) + timedelta(days=calendar_service.WORK_DAYS - 1)).isoformat(),
+        }
+        for b in shift_blocks
+    ]
     db.sync_documents_from_disk(conn, username, Path(settings.uploads_path) / username)
     return render(
         request,
@@ -173,7 +180,7 @@ def bookmarks_page(
         categories=db.list_categories(conn, username),
         calendar_months=calendar_service.build_calendar_months(
             date.today(), NUM_CALENDAR_MONTHS, birthdays, vacations, shift_start, holidays, tasks,
-            months_offset=month_offset, weekly_shifts=weekly_shifts,
+            months_offset=month_offset, shift_blocks=shift_blocks,
         ),
         month_offset=month_offset,
         birthdays=birthdays,
@@ -181,7 +188,7 @@ def bookmarks_page(
         holidays=holidays,
         tasks=tasks,
         work_shift=work_shift,
-        weekly_shifts=weekly_shifts,
+        shift_blocks=shift_blocks_view,
         documents=db.list_documents(conn, username),
         sticky_notes=db.list_sticky_notes(conn, username),
         open_manage=bool(open_manage),
@@ -352,28 +359,28 @@ def set_shift(
     return _redirect_to_bookmarks(open_manage=1, fragment="calendar-settings")
 
 
-@app.post("/calendar/weekly-shifts")
-def add_weekly_shift(
+@app.post("/calendar/shift-blocks")
+def add_shift_block(
     request: Request,
-    week_date: str = Form(...),
-    shift_type: str = Form(...),
+    start_date: str = Form(...),
+    shift_type: str = Form(db.DEFAULT_SHIFT_TYPE),
     conn=Depends(get_db),
 ):
     username = _current_username(request)
     if not username:
         return RedirectResponse("/", status_code=303)
-    if shift_type in db.WEEKLY_SHIFT_TYPES:
-        week_start = date.fromisocalendar(*date.fromisoformat(week_date).isocalendar()[:2], 1)
-        db.set_weekly_shift(conn, username, week_start.isoformat(), shift_type)
+    if shift_type not in db.SHIFT_TYPES:
+        shift_type = db.DEFAULT_SHIFT_TYPE
+    db.set_shift_block(conn, username, start_date, shift_type)
     return _redirect_to_bookmarks(open_manage=1, fragment="calendar-settings")
 
 
-@app.post("/calendar/weekly-shifts/{week_start}/delete")
-def delete_weekly_shift(request: Request, week_start: str, conn=Depends(get_db)):
+@app.post("/calendar/shift-blocks/{block_start}/delete")
+def delete_shift_block(request: Request, block_start: str, conn=Depends(get_db)):
     username = _current_username(request)
     if not username:
         return RedirectResponse("/", status_code=303)
-    db.delete_weekly_shift(conn, username, week_start)
+    db.delete_shift_block(conn, username, block_start)
     return _redirect_to_bookmarks(open_manage=1, fragment="calendar-settings")
 
 

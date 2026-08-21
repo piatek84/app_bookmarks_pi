@@ -2,7 +2,7 @@
 today/past, birthdays, vacations, or work-shift rest days.
 """
 import calendar as stdlib_calendar
-from datetime import date
+from datetime import date, timedelta
 from typing import Optional
 
 WORK_DAYS = 6
@@ -31,7 +31,7 @@ def build_calendar_months(
     holidays=(),
     tasks=(),
     months_offset: int = 0,
-    weekly_shifts=(),
+    shift_blocks=(),
 ) -> list[dict]:
     birthday_lookup = {(b["month"], b["day"]): b["title"] for b in birthdays}
     holiday_lookup = {(h["month"], h["day"]): h["title"] for h in holidays}
@@ -41,9 +41,14 @@ def build_calendar_months(
         for v in vacations
     ]
     shift_start_date = date.fromisoformat(shift_start) if shift_start else None
-    weekly_shift_lookup = {
-        date.fromisoformat(w["week_start"]).isocalendar()[:2]: w["shift_type"] for w in weekly_shifts
-    }
+    shift_block_ranges = [
+        (
+            date.fromisoformat(b["block_start"]),
+            date.fromisoformat(b["block_start"]) + timedelta(days=WORK_DAYS - 1),
+            b["shift_type"],
+        )
+        for b in shift_blocks
+    ]
 
     months = []
     first_of_month = _add_months(date(today.year, today.month, 1), months_offset)
@@ -57,7 +62,7 @@ def build_calendar_months(
                 vacation_ranges,
                 shift_start_date,
                 task_lookup,
-                weekly_shift_lookup,
+                shift_block_ranges,
             )
         )
     return months
@@ -71,7 +76,7 @@ def _build_month(
     vacation_ranges,
     shift_start: Optional[date],
     task_lookup,
-    weekly_shift_lookup,
+    shift_block_ranges,
 ) -> dict:
     days_in_month = stdlib_calendar.monthrange(first_day.year, first_day.month)[1]
     weeks: list[list[Optional[dict]]] = []
@@ -92,7 +97,12 @@ def _build_month(
         is_rest_day = (
             is_future_or_today and shift_start is not None and _is_rest_day(current, shift_start)
         )
-        weekly_shift_type = weekly_shift_lookup.get(current.isocalendar()[:2]) if is_future_or_today else None
+        shift_block_type = None
+        if is_future_or_today:
+            for start, end, block_type in shift_block_ranges:
+                if start <= current <= end:
+                    shift_block_type = block_type
+                    break
 
         hint_parts = []
         if birthday_title:
@@ -103,8 +113,8 @@ def _build_month(
             hint_parts.append(f"Vacation: {vacation_title}")
         if is_rest_day:
             hint_parts.append("Rest day")
-        if weekly_shift_type:
-            hint_parts.append(f"Shift: {weekly_shift_type.capitalize()}")
+        if shift_block_type:
+            hint_parts.append(f"Shift: {shift_block_type.capitalize()}")
         if task_title:
             hint_parts.append(f"Task: {task_title}")
 
@@ -117,7 +127,7 @@ def _build_month(
                 "holiday_title": holiday_title,
                 "vacation_title": vacation_title,
                 "is_rest_day": is_rest_day,
-                "weekly_shift_type": weekly_shift_type,
+                "shift_block_type": shift_block_type,
                 "task_title": task_title,
                 "hint": "\n".join(hint_parts) if hint_parts else None,
             }

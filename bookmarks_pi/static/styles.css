@@ -7,10 +7,10 @@
   --border: #2b2b2b;
   --birthday: #ffcb77;
   --vacation: #8ecae6;
-  --rest: #c9b6e4;
+  --rest: #a8d5a2;
   --holiday: #ff6b6b;
   --task: #f4d35e;
-  --shift-morning: #a8d5a2;
+  --shift-morning: #c9b6e4;
   --shift-afternoon: #f4a261;
   --shift-night: #9a9a9a;
   --sticky-bg: #fdea6b;
@@ -587,7 +587,7 @@ button:hover {
   font-weight: 700;
 }
 
-.birthday-day::after {
+.day.birthday-day::after {
   content: "🎉";
   margin-left: 1px;
   font-size: 0.5rem;

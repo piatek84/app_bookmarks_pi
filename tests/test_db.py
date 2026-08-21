@@ -291,21 +291,21 @@ def test_work_shift_upsert_and_scoping(conn):
     assert db.get_work_shift(conn, "other") is None
 
 
-def test_weekly_shift_upsert_list_and_delete(conn):
-    assert db.list_weekly_shifts(conn, "juan") == []
-    db.set_weekly_shift(conn, "juan", "2026-08-24", "morning")
-    shifts = db.list_weekly_shifts(conn, "juan")
-    assert len(shifts) == 1
-    assert shifts[0]["week_start"] == "2026-08-24"
-    assert shifts[0]["shift_type"] == "morning"
+def test_shift_block_upsert_list_and_delete(conn):
+    assert db.list_shift_blocks(conn, "juan") == []
+    db.set_shift_block(conn, "juan", "2026-08-24", "morning")
+    blocks = db.list_shift_blocks(conn, "juan")
+    assert len(blocks) == 1
+    assert blocks[0]["block_start"] == "2026-08-24"
+    assert blocks[0]["shift_type"] == "morning"
 
-    db.set_weekly_shift(conn, "juan", "2026-08-24", "night")
-    shifts = db.list_weekly_shifts(conn, "juan")
-    assert len(shifts) == 1
-    assert shifts[0]["shift_type"] == "night"
+    db.set_shift_block(conn, "juan", "2026-08-24", "night")
+    blocks = db.list_shift_blocks(conn, "juan")
+    assert len(blocks) == 1
+    assert blocks[0]["shift_type"] == "night"
 
-    assert db.list_weekly_shifts(conn, "other") == []
+    assert db.list_shift_blocks(conn, "other") == []
 
-    assert db.delete_weekly_shift(conn, "juan", "2026-08-24") is True
-    assert db.list_weekly_shifts(conn, "juan") == []
-    assert db.delete_weekly_shift(conn, "juan", "2026-08-24") is False
+    assert db.delete_shift_block(conn, "juan", "2026-08-24") is True
+    assert db.list_shift_blocks(conn, "juan") == []
+    assert db.delete_shift_block(conn, "juan", "2026-08-24") is False

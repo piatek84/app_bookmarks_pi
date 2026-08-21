@@ -16,7 +16,7 @@ from starlette.testclient import TestClient
 
 from bookmarks_pi import db, main
 
-TABLES = ["users", "login_codes", "bookmarks", "birthdays", "vacations", "holidays", "tasks", "work_shifts", "weekly_shifts", "category_order"]
+TABLES = ["users", "login_codes", "bookmarks", "birthdays", "vacations", "holidays", "tasks", "work_shifts", "shift_blocks", "category_order"]
 
 
 @pytest.fixture
@@ -363,26 +363,35 @@ def test_work_shift_can_be_saved_enabled_and_disabled(client):
     assert row["enabled"] == 0
 
 
-def test_adding_a_weekly_shift_shows_it_in_the_manage_panel(client):
-    r = client.post("/calendar/weekly-shifts", data={"week_date": "2026-01-20", "shift_type": "afternoon"})
+def test_adding_a_shift_block_shows_it_in_the_manage_panel(client):
+    r = client.post("/calendar/shift-blocks", data={"start_date": "2026-01-19", "shift_type": "afternoon"})
     assert r.status_code == 200
     assert 'id="calendar-settings" open' in r.text
-    assert "Week of 2026-01-19 - Afternoon" in r.text
+    assert "2026-01-19 → 2026-01-24 - Afternoon" in r.text
 
     conn = db.open_connection(main.settings.database_path)
-    shifts = db.list_weekly_shifts(conn, "juan")
+    blocks = db.list_shift_blocks(conn, "juan")
     conn.close()
-    assert len(shifts) == 1
-    assert shifts[0]["week_start"] == "2026-01-19"
+    assert len(blocks) == 1
+    assert blocks[0]["block_start"] == "2026-01-19"
 
 
-def test_deleting_a_weekly_shift_removes_it(client):
-    client.post("/calendar/weekly-shifts", data={"week_date": "2026-01-20", "shift_type": "night"})
-
-    r = client.post("/calendar/weekly-shifts/2026-01-19/delete")
+def test_shift_block_defaults_to_morning_when_type_is_missing(client):
+    r = client.post("/calendar/shift-blocks", data={"start_date": "2026-01-19"})
     assert r.status_code == 200
-    assert "No weekly shifts set." in r.text
+    conn = db.open_connection(main.settings.database_path)
+    blocks = db.list_shift_blocks(conn, "juan")
+    conn.close()
+    assert blocks[0]["shift_type"] == "morning"
+
+
+def test_deleting_a_shift_block_removes_it(client):
+    client.post("/calendar/shift-blocks", data={"start_date": "2026-01-19", "shift_type": "night"})
+
+    r = client.post("/calendar/shift-blocks/2026-01-19/delete")
+    assert r.status_code == 200
+    assert "No shift blocks set." in r.text
 
     conn = db.open_connection(main.settings.database_path)
-    assert db.list_weekly_shifts(conn, "juan") == []
+    assert db.list_shift_blocks(conn, "juan") == []
     conn.close()

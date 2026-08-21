@@ -62,14 +62,14 @@ CREATE TABLE IF NOT EXISTS work_shifts (
     enabled INTEGER NOT NULL DEFAULT 1
 );
 
-CREATE TABLE IF NOT EXISTS weekly_shifts (
+CREATE TABLE IF NOT EXISTS shift_blocks (
     owner_username TEXT NOT NULL,
-    week_start TEXT NOT NULL,
+    block_start TEXT NOT NULL,
     shift_type TEXT NOT NULL,
     created_at TEXT NOT NULL,
-    PRIMARY KEY (owner_username, week_start)
+    PRIMARY KEY (owner_username, block_start)
 );
-CREATE INDEX IF NOT EXISTS idx_weekly_shifts_owner ON weekly_shifts (owner_username);
+CREATE INDEX IF NOT EXISTS idx_shift_blocks_owner ON shift_blocks (owner_username);
 
 CREATE TABLE IF NOT EXISTS holidays (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -556,33 +556,34 @@ def set_work_shift(conn: sqlite3.Connection, owner_username: str, start_date: st
     conn.commit()
 
 
-WEEKLY_SHIFT_TYPES = ("morning", "afternoon", "night")
+SHIFT_TYPES = ("morning", "afternoon", "night")
+DEFAULT_SHIFT_TYPE = "morning"
 
 
-def set_weekly_shift(conn: sqlite3.Connection, owner_username: str, week_start: str, shift_type: str) -> sqlite3.Row:
+def set_shift_block(conn: sqlite3.Connection, owner_username: str, block_start: str, shift_type: str) -> sqlite3.Row:
     conn.execute(
-        """INSERT INTO weekly_shifts (owner_username, week_start, shift_type, created_at) VALUES (?, ?, ?, ?)
-           ON CONFLICT(owner_username, week_start) DO UPDATE SET shift_type = excluded.shift_type""",
-        (owner_username, week_start, shift_type, _now()),
+        """INSERT INTO shift_blocks (owner_username, block_start, shift_type, created_at) VALUES (?, ?, ?, ?)
+           ON CONFLICT(owner_username, block_start) DO UPDATE SET shift_type = excluded.shift_type""",
+        (owner_username, block_start, shift_type, _now()),
     )
     conn.commit()
     return conn.execute(
-        "SELECT * FROM weekly_shifts WHERE owner_username = ? AND week_start = ?",
-        (owner_username, week_start),
+        "SELECT * FROM shift_blocks WHERE owner_username = ? AND block_start = ?",
+        (owner_username, block_start),
     ).fetchone()
 
 
-def list_weekly_shifts(conn: sqlite3.Connection, owner_username: str) -> list[sqlite3.Row]:
+def list_shift_blocks(conn: sqlite3.Connection, owner_username: str) -> list[sqlite3.Row]:
     return conn.execute(
-        "SELECT * FROM weekly_shifts WHERE owner_username = ? ORDER BY week_start",
+        "SELECT * FROM shift_blocks WHERE owner_username = ? ORDER BY block_start",
         (owner_username,),
     ).fetchall()
 
 
-def delete_weekly_shift(conn: sqlite3.Connection, owner_username: str, week_start: str) -> bool:
+def delete_shift_block(conn: sqlite3.Connection, owner_username: str, block_start: str) -> bool:
     cursor = conn.execute(
-        "DELETE FROM weekly_shifts WHERE owner_username = ? AND week_start = ?",
-        (owner_username, week_start),
+        "DELETE FROM shift_blocks WHERE owner_username = ? AND block_start = ?",
+        (owner_username, block_start),
     )
     conn.commit()
     return cursor.rowcount > 0
