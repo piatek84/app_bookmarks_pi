@@ -255,31 +255,14 @@
     <details class="calendar-settings" id="sticky-notes-settings">
       <summary>Manage sticky notes</summary>
       <div class="calendar-manage">
-        <div class="manage-card">
-          <form class="calendar-form" method="post" action="/notes">
-            <textarea name="content" placeholder="New note..." required></textarea>
-            <button type="submit">Add note</button>
-          </form>
-        </div>
+        <form class="sticky-note-add-standalone" method="post" action="/notes">
+          <textarea name="content" placeholder="New note..." required></textarea>
+          <button type="submit">Add note</button>
+        </form>
       </div>
     </details>
     {% endif %}
   </section>
-
-  <details class="calendar-settings" id="bookmarks-settings" {% if open_bookmarks %}open{% endif %}>
-    <summary>Manage bookmarks</summary>
-    <form class="bookmark-form" method="post" action="/bookmarks">
-      <input placeholder="Category" name="category" list="category-options" required />
-      <datalist id="category-options">
-        {% for c in categories %}
-        <option value="{{ c }}"></option>
-        {% endfor %}
-      </datalist>
-      <input placeholder="Name" name="name" required />
-      <input placeholder="https://..." name="url" type="url" required />
-      <button type="submit">Add bookmark</button>
-    </form>
-  </details>
 
   <details class="calendar-settings" id="documents-settings" {% if open_documents %}open{% endif %}>
     <summary>Manage documents</summary>
@@ -303,6 +286,21 @@
         </ul>
       </div>
     </div>
+  </details>
+
+  <details class="calendar-settings" id="bookmarks-settings" {% if open_bookmarks %}open{% endif %}>
+    <summary>Manage bookmarks</summary>
+    <form class="bookmark-form" method="post" action="/bookmarks">
+      <input placeholder="Category" name="category" list="category-options" required />
+      <datalist id="category-options">
+        {% for c in categories %}
+        <option value="{{ c }}"></option>
+        {% endfor %}
+      </datalist>
+      <input placeholder="Name" name="name" required />
+      <input placeholder="https://..." name="url" type="url" required />
+      <button type="submit">Add bookmark</button>
+    </form>
   </details>
 
   {% if error %}<p class="error">{{ error }}</p>{% endif %}
