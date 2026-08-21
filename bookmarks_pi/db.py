@@ -321,6 +321,28 @@ def reorder_bookmarks(conn: sqlite3.Connection, owner_username: str, category: s
     conn.commit()
 
 
+def move_bookmark(
+    conn: sqlite3.Connection, owner_username: str, bookmark_id: int, category: str, ordered_ids: list[int]
+) -> bool:
+    """Drags `bookmark_id` into `category` (possibly its current one) and applies
+    `ordered_ids` -- the full drop-target list's new id order -- as positions."""
+    existing = get_bookmark(conn, owner_username, bookmark_id)
+    if existing is None:
+        return False
+    conn.execute(
+        "UPDATE bookmarks SET category = ? WHERE id = ? AND owner_username = ?",
+        (category, bookmark_id, owner_username),
+    )
+    for index, bid in enumerate(ordered_ids):
+        conn.execute(
+            "UPDATE bookmarks SET position = ? WHERE id = ? AND owner_username = ? AND category = ?",
+            (index, bid, owner_username, category),
+        )
+    _ensure_category_position(conn, owner_username, category)
+    conn.commit()
+    return True
+
+
 def list_bookmarks(conn: sqlite3.Connection, owner_username: str, category: Optional[str] = None) -> list[sqlite3.Row]:
     if category:
         return conn.execute(

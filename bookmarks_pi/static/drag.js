@@ -38,6 +38,68 @@
     return closest;
   }
 
+  // Bookmarks can be dragged both within their category (reordering) and
+  // into a different category's list (moving). Unlike setupDragReorder, the
+  // valid drop target here isn't fixed to one container up front, so this
+  // tracks the item's live parent <ul> as it's dragged across category
+  // boundaries and always submits to the list it lands in.
+  function setupBookmarkDrag(root) {
+    var items = root.querySelectorAll("li[data-id]");
+    for (var i = 0; i < items.length; i++) {
+      items[i].setAttribute("draggable", "true");
+    }
+
+    var dragEl = null;
+
+    root.addEventListener("dragstart", function (event) {
+      var item = event.target.closest("li[data-id]");
+      if (!item || !root.contains(item)) return;
+      dragEl = item;
+      item.classList.add("dragging");
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", "");
+    });
+
+    root.addEventListener("dragend", function () {
+      if (dragEl) dragEl.classList.remove("dragging");
+      dragEl = null;
+    });
+
+    root.addEventListener("dragover", function (event) {
+      if (!dragEl) return;
+      var list = event.target.closest(".bookmark-list");
+      if (!list || !root.contains(list)) return;
+      event.preventDefault();
+      var target = closestItem(list, "li[data-id]", dragEl, event.clientX, event.clientY);
+      if (target) {
+        var rect = target.getBoundingClientRect();
+        if (isBeforeTarget(rect, event.clientX, event.clientY)) {
+          list.insertBefore(dragEl, target);
+        } else {
+          list.insertBefore(dragEl, target.nextSibling);
+        }
+      } else if (!list.contains(dragEl)) {
+        list.appendChild(dragEl);
+      }
+    });
+
+    root.addEventListener("drop", function (event) {
+      if (!dragEl) return;
+      event.preventDefault();
+      var list = dragEl.closest(".bookmark-list");
+      var group = dragEl.closest(".bookmark-group[data-category]");
+      if (!list || !group) return;
+      var id = dragEl.dataset.id;
+      var order = Array.prototype.map.call(list.querySelectorAll("li[data-id]"), function (item) {
+        return item.dataset.id;
+      });
+      var more = group.querySelector(".bookmark-more");
+      var fields = { category: group.dataset.category, id: order };
+      if (more && more.open) fields.open_more = "1";
+      submitAjax("/bookmarks/" + id + "/move", fields);
+    });
+  }
+
   function setupDragReorder(container, selector, ignoreSelector, datasetKey, onDrop) {
     var items = container.querySelectorAll(selector);
     for (var i = 0; i < items.length; i++) {
@@ -214,16 +276,8 @@
       setupDragReorder(categoriesContainer, ".bookmark-group", "li[data-id]", "category", function (order) {
         submitAjax("/bookmarks/categories/reorder", { category: order });
       });
+      setupBookmarkDrag(categoriesContainer);
     }
-
-    document.querySelectorAll(".bookmark-group[data-category]").forEach(function (group) {
-      setupDragReorder(group, "li[data-id]", null, "id", function (order) {
-        var more = group.querySelector(".bookmark-more");
-        var fields = { category: group.dataset.category, id: order };
-        if (more && more.open) fields.open_more = "1";
-        submitAjax("/bookmarks/reorder", fields);
-      });
-    });
   }
 
   document.addEventListener("DOMContentLoaded", initGroups);

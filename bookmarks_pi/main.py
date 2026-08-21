@@ -472,6 +472,24 @@ def reorder_categories(request: Request, category: list[str] = Form(...), conn=D
     return _redirect_to_bookmarks()
 
 
+@app.post("/bookmarks/{bookmark_id}/move")
+def move_bookmark(
+    request: Request,
+    bookmark_id: int,
+    category: str = Form(...),
+    id: list[int] = Form(...),
+    open_more: Optional[str] = Form(None),
+    conn=Depends(get_db),
+):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    db.move_bookmark(conn, username, bookmark_id, category, id)
+    return _redirect_to_bookmarks(
+        fragment=f"category-{slugify(category)}", open_more=category if open_more else None
+    )
+
+
 @app.post("/bookmarks/reorder")
 def reorder_bookmarks(
     request: Request,
