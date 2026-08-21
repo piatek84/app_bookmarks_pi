@@ -205,16 +205,23 @@ def move_category(conn: sqlite3.Connection, owner_username: str, category: str, 
     category_order keeps a row for every category ever used, even after its
     last bookmark is deleted or recategorized, so ignoring that filter would
     swap against invisible "ghost" categories and appear to do nothing.
+
+    Renumbers every visible category sequentially afterwards instead of
+    swapping the two raw position values: stale data can leave two
+    categories sharing the same position (e.g. from an old reorder that
+    skipped one of them), and swapping two equal values is a no-op that
+    looks like the button did nothing. Renumbering also self-heals that
+    corruption for the rest of the list on every move.
     """
     _sync_category_positions(conn, owner_username)
     rows = conn.execute(
-        """SELECT co.category, co.position FROM category_order co
+        """SELECT co.category FROM category_order co
            WHERE co.owner_username = ?
              AND EXISTS (
                  SELECT 1 FROM bookmarks b
                  WHERE b.owner_username = co.owner_username AND b.category = co.category
              )
-           ORDER BY co.position""",
+           ORDER BY co.position, co.category""",
         (owner_username,),
     ).fetchall()
     categories = [row["category"] for row in rows]
@@ -224,14 +231,12 @@ def move_category(conn: sqlite3.Connection, owner_username: str, category: str, 
     swap_index = index + direction
     if swap_index < 0 or swap_index >= len(categories):
         return
-    conn.execute(
-        "UPDATE category_order SET position = ? WHERE owner_username = ? AND category = ?",
-        (rows[swap_index]["position"], owner_username, category),
-    )
-    conn.execute(
-        "UPDATE category_order SET position = ? WHERE owner_username = ? AND category = ?",
-        (rows[index]["position"], owner_username, categories[swap_index]),
-    )
+    categories[index], categories[swap_index] = categories[swap_index], categories[index]
+    for position, cat in enumerate(categories):
+        conn.execute(
+            "UPDATE category_order SET position = ? WHERE owner_username = ? AND category = ?",
+            (position, owner_username, cat),
+        )
     conn.commit()
 
 
@@ -357,7 +362,7 @@ def list_bookmarks_grouped_by_category(conn: sqlite3.Connection, owner_username:
     order = [
         row["category"]
         for row in conn.execute(
-            "SELECT category FROM category_order WHERE owner_username = ? ORDER BY position",
+            "SELECT category FROM category_order WHERE owner_username = ? ORDER BY position, category",
             (owner_username,),
         ).fetchall()
     ]
