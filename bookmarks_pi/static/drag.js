@@ -411,6 +411,26 @@
     }
   });
 
+  // The size slider updates live while dragging (so it's clear what's being
+  // picked) but only saves -- via the AJAX swap, like color/rotation above --
+  // once the user releases it. Saving on every "input" tick would fight the
+  // drag with a mid-gesture DOM swap.
+  document.addEventListener("input", function (event) {
+    var slider = event.target.closest(".sticky-note-size-slider");
+    if (!slider) return;
+    var sizeNote = slider.closest(".sticky-note[data-id]");
+    if (!sizeNote) return;
+    sizeNote.style.setProperty("--note-size", slider.value + "px");
+  });
+
+  document.addEventListener("change", function (event) {
+    var slider = event.target.closest(".sticky-note-size-slider");
+    if (!slider) return;
+    var sizeNote = slider.closest(".sticky-note[data-id]");
+    if (!sizeNote) return;
+    submitAjax("/notes/" + sizeNote.dataset.id + "/size", { size: slider.value });
+  });
+
   document.addEventListener("submit", function (event) {
     var form = event.target;
     if (!form.closest(".bookmark-groups, .notes-documents-row")) return;

@@ -143,6 +143,8 @@ def logout(request: Request):
 THEME_CYCLE = ["dark", "light", "sepia"]
 STICKY_NOTE_COLORS = {"yellow", "pink", "blue", "green", "orange", "purple"}
 STICKY_NOTE_ROTATION_LIMIT = 45
+STICKY_NOTE_SIZE_MIN = 90
+STICKY_NOTE_SIZE_MAX = 220
 
 
 @app.post("/theme")
@@ -218,6 +220,8 @@ def bookmarks_page(
         documents=db.list_documents(conn, username),
         positioned_sticky_notes=positioned_sticky_notes,
         default_sticky_notes=default_sticky_notes,
+        size_min=STICKY_NOTE_SIZE_MIN,
+        size_max=STICKY_NOTE_SIZE_MAX,
         open_manage=bool(open_manage),
         open_bookmarks=bool(open_bookmarks),
         open_documents=bool(open_documents),
@@ -632,6 +636,16 @@ def recolor_sticky_note(request: Request, note_id: int, color: str = Form(...), 
     if color not in STICKY_NOTE_COLORS:
         return _redirect_to_bookmarks(fragment="sticky-notes")
     db.update_sticky_note_color(conn, username, note_id, color)
+    return _redirect_to_bookmarks(fragment="sticky-notes")
+
+
+@app.post("/notes/{note_id}/size")
+def resize_sticky_note(request: Request, note_id: int, size: int = Form(...), conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    size = max(STICKY_NOTE_SIZE_MIN, min(STICKY_NOTE_SIZE_MAX, size))
+    db.update_sticky_note_size(conn, username, note_id, size)
     return _redirect_to_bookmarks(fragment="sticky-notes")
 
 
