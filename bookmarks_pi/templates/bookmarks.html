@@ -107,19 +107,20 @@
       {% endfor %}
     </div>
 
-    <div class="calendar-legend">
-      <span class="legend-item"><span class="legend-swatch birthday-day"></span>Birthday</span>
-      <span class="legend-item"><span class="legend-swatch holiday-day"></span>Holiday</span>
-      <span class="legend-item"><span class="legend-swatch vacation-day"></span>Vacation</span>
-      <span class="legend-item"><span class="legend-swatch rest-day"></span>Rest day</span>
-      <span class="legend-item"><span class="legend-swatch current-day"></span>Today</span>
-      <span class="legend-item"><span class="legend-asterisk">*</span>Task</span>
-    </div>
+    <div class="calendar-legend-row">
+      <div class="calendar-legend">
+        <span class="legend-item"><span class="legend-swatch birthday-day"></span>Birthday</span>
+        <span class="legend-item"><span class="legend-swatch holiday-day"></span>Holiday</span>
+        <span class="legend-item"><span class="legend-swatch vacation-day"></span>Vacation</span>
+        <span class="legend-item"><span class="legend-swatch rest-day"></span>Rest day</span>
+        <span class="legend-item"><span class="legend-swatch current-day"></span>Today</span>
+        <span class="legend-item"><span class="legend-asterisk">*</span>Task</span>
+      </div>
 
-    <details class="calendar-settings" id="calendar-settings" {% if open_manage %}open{% endif %}>
-      <summary>Manage calendar</summary>
-      <div class="calendar-manage">
-        <div class="manage-card">
+      <details class="calendar-settings" id="calendar-settings" {% if open_manage %}open{% endif %}>
+        <summary>Manage calendar</summary>
+        <div class="calendar-manage">
+          <div class="manage-card">
           <h2>Birthdays</h2>
           <form class="calendar-form" method="post" action="/calendar/birthdays">
             <input placeholder="Name" name="title" required />
@@ -232,7 +233,8 @@
           </form>
         </div>
       </div>
-    </details>
+      </details>
+    </div>
   </section>
 
   <section class="sticky-notes-section" id="sticky-notes">
@@ -240,10 +242,26 @@
     <div class="sticky-notes">
       {% for note in sticky_notes %}
       <div class="sticky-note">
-        <form method="post" action="/notes/{{ note['id'] }}/delete">
-          <button type="submit" class="sticky-note-delete" aria-label="Delete note">&times;</button>
-        </form>
+        <div class="sticky-note-actions">
+          <a href="#edit-note-{{ note['id'] }}" class="sticky-note-edit" aria-label="Edit note"><span class="edit-icon">&#9998;</span></a>
+          <form method="post" action="/notes/{{ note['id'] }}/delete">
+            <button type="submit" class="sticky-note-delete" aria-label="Delete note">&times;</button>
+          </form>
+        </div>
         <p>{{ note['content'] }}</p>
+      </div>
+      <div id="edit-note-{{ note['id'] }}" class="modal-overlay">
+        <a href="#" class="modal-backdrop" aria-label="Close"></a>
+        <div class="modal">
+          <h2>Edit note</h2>
+          <form method="post" action="/notes/{{ note['id'] }}/edit">
+            <textarea name="content" required>{{ note['content'] }}</textarea>
+            <div class="modal-actions">
+              <a href="#" class="cancel-btn">Cancel</a>
+              <button type="submit">Save</button>
+            </div>
+          </form>
+        </div>
       </div>
       {% endfor %}
       <form class="sticky-note sticky-note-add" method="post" action="/notes">

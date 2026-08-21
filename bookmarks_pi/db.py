@@ -592,6 +592,15 @@ def list_sticky_notes(conn: sqlite3.Connection, owner_username: str) -> list[sql
     ).fetchall()
 
 
+def update_sticky_note(conn: sqlite3.Connection, owner_username: str, note_id: int, content: str) -> bool:
+    cursor = conn.execute(
+        "UPDATE sticky_notes SET content = ? WHERE id = ? AND owner_username = ?",
+        (content, note_id, owner_username),
+    )
+    conn.commit()
+    return cursor.rowcount > 0
+
+
 def delete_sticky_note(conn: sqlite3.Connection, owner_username: str, note_id: int) -> bool:
     cursor = conn.execute(
         "DELETE FROM sticky_notes WHERE id = ? AND owner_username = ?",

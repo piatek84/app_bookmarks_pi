@@ -358,6 +358,11 @@ button:hover {
   gap: 0.5rem;
 }
 
+.modal form textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;
@@ -551,11 +556,24 @@ button:hover {
   font-weight: 700;
 }
 
+.calendar-legend-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-top: 0.75rem;
+}
+
+.calendar-legend-row > .calendar-settings {
+  margin-top: 0;
+  flex-shrink: 0;
+}
+
 .calendar-legend {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
-  margin-top: 0.75rem;
   font-size: 0.8rem;
   color: var(--muted);
 }
@@ -778,19 +796,41 @@ button:hover {
   word-break: break-word;
 }
 
-.sticky-note-delete {
+.sticky-note-actions {
   position: absolute;
   top: 0.2rem;
   right: 0.3rem;
+  display: flex;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+.sticky-note-actions form {
+  margin: 0;
+}
+
+.sticky-note-edit,
+.sticky-note-delete {
   background: transparent;
   border: none;
   color: var(--sticky-fg);
   opacity: 0.5;
-  font-size: 0.9rem;
   line-height: 1;
   padding: 0.1rem 0.3rem;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
 }
 
+.sticky-note-delete {
+  font-size: 0.9rem;
+}
+
+.sticky-note-edit {
+  font-size: 0.7rem;
+}
+
+.sticky-note-edit:hover,
 .sticky-note-delete:hover {
   opacity: 1;
 }

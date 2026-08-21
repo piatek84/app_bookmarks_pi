@@ -498,6 +498,15 @@ def add_sticky_note(request: Request, content: str = Form(...), conn=Depends(get
     return _redirect_to_bookmarks(fragment="sticky-notes")
 
 
+@app.post("/notes/{note_id}/edit")
+def edit_sticky_note(request: Request, note_id: int, content: str = Form(...), conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    db.update_sticky_note(conn, username, note_id, content)
+    return _redirect_to_bookmarks(fragment="sticky-notes")
+
+
 @app.post("/notes/{note_id}/delete")
 def delete_sticky_note(request: Request, note_id: int, conn=Depends(get_db)):
     username = _current_username(request)
