@@ -159,9 +159,12 @@
       // at the same scroll position, so their difference is scroll-invariant
       // -- exactly the page-relative offset a position:absolute left/top
       // needs, however far down the page has been scrolled.
+      // Negative x/y is fine and intentional -- .page is centered with room
+      // to spare on wider screens, and notes should be droppable out in
+      // those margins, not just within .page's own box.
       var pageRect = page.getBoundingClientRect();
-      var x = Math.max(0, Math.round(event.clientX - pageRect.left - grabX));
-      var y = Math.max(0, Math.round(event.clientY - pageRect.top - grabY));
+      var x = Math.round(event.clientX - pageRect.left - grabX);
+      var y = Math.round(event.clientY - pageRect.top - grabY);
       dragEl.style.position = "absolute";
       dragEl.style.left = x + "px";
       dragEl.style.top = y + "px";
@@ -384,6 +387,27 @@
       event.preventDefault();
       var editForm = cancelLink.closest(".sticky-note-edit-form");
       if (editForm) editForm.classList.remove("editing");
+      return;
+    }
+    // Color and rotation apply immediately (like drag-to-reposition) rather
+    // than waiting for Save, since they aren't part of the note's text.
+    var swatch = event.target.closest(".sticky-note-color-swatch");
+    if (swatch) {
+      var colorNote = swatch.closest(".sticky-note[data-id]");
+      if (!colorNote) return;
+      var color = swatch.dataset.color;
+      colorNote.dataset.color = color;
+      submitAjax("/notes/" + colorNote.dataset.id + "/color", { color: color });
+      return;
+    }
+    var rotateBtn = event.target.closest(".sticky-note-rotate-btn");
+    if (rotateBtn) {
+      var rotateNote = rotateBtn.closest(".sticky-note[data-id]");
+      if (!rotateNote) return;
+      var current = parseFloat(getComputedStyle(rotateNote).getPropertyValue("--note-rotation")) || 0;
+      var next = Math.max(-45, Math.min(45, current + Number(rotateBtn.dataset.dir) * 10));
+      rotateNote.style.setProperty("--note-rotation", next + "deg");
+      submitAjax("/notes/" + rotateNote.dataset.id + "/rotation", { deg: Math.round(next) });
     }
   });
 

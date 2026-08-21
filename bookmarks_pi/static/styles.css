@@ -897,6 +897,10 @@ button:hover {
   color: var(--sticky-fg);
   border-radius: 2px;
   box-shadow: 2px 4px 10px rgba(0, 0, 0, 0.3);
+  /* Falls back to whichever nth-child rule below applies; a note with a
+     user-chosen rotation gets --note-rotation set inline, which (being
+     inline) always wins over those class rules. */
+  transform: rotate(var(--note-rotation, 0deg));
   transition: transform 0.15s ease;
   /* Above the page's normal-flow content (calendar, bookmarks, documents)
      so a freely-dragged note (position: absolute, see .page) can be dropped
@@ -915,20 +919,112 @@ button:hover {
 }
 
 .sticky-notes .sticky-note:nth-child(3n+1) {
-  transform: rotate(-2.5deg);
+  --note-rotation: -2.5deg;
 }
 
 .sticky-notes .sticky-note:nth-child(3n+2) {
-  transform: rotate(1.5deg);
+  --note-rotation: 1.5deg;
 }
 
 .sticky-notes .sticky-note:nth-child(3n+3) {
-  transform: rotate(-1deg);
+  --note-rotation: -1deg;
 }
 
 .sticky-note:hover {
   transform: rotate(0deg) scale(1.03);
   z-index: 6;
+}
+
+/* Named palette, chosen via the swatches in the edit form. Yellow is the
+   default (theme's base --sticky-bg/--sticky-fg), so it needs no override. */
+.sticky-note[data-color="pink"] {
+  --sticky-bg: #f6a6c1;
+  --sticky-fg: #4a1f30;
+}
+
+.sticky-note[data-color="blue"] {
+  --sticky-bg: #a8d8f0;
+  --sticky-fg: #1c3a4a;
+}
+
+.sticky-note[data-color="green"] {
+  --sticky-bg: #b8e0a8;
+  --sticky-fg: #234a1f;
+}
+
+.sticky-note[data-color="orange"] {
+  --sticky-bg: #f7c07a;
+  --sticky-fg: #5c3a10;
+}
+
+.sticky-note[data-color="purple"] {
+  --sticky-bg: #cbaee0;
+  --sticky-fg: #3a1f5c;
+}
+
+.sticky-note-style-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.sticky-note-colors {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.sticky-note-color-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  padding: 0;
+  cursor: pointer;
+}
+
+.sticky-note-color-yellow {
+  background: #fdea6b;
+}
+
+.sticky-note-color-pink {
+  background: #f6a6c1;
+}
+
+.sticky-note-color-blue {
+  background: #a8d8f0;
+}
+
+.sticky-note-color-green {
+  background: #b8e0a8;
+}
+
+.sticky-note-color-orange {
+  background: #f7c07a;
+}
+
+.sticky-note-color-purple {
+  background: #cbaee0;
+}
+
+.sticky-note-rotate {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.sticky-note-rotate-btn {
+  background: transparent;
+  border: none;
+  color: var(--sticky-fg);
+  opacity: 0.6;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+}
+
+.sticky-note-rotate-btn:hover {
+  opacity: 1;
 }
 
 .sticky-note p {
