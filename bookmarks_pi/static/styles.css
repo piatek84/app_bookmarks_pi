@@ -477,7 +477,6 @@ button:hover {
 
 .calendar-nav {
   position: relative;
-  padding: 0 1.6rem;
 }
 
 .calendar-arrow {
@@ -489,11 +488,11 @@ button:hover {
 }
 
 .calendar-arrow-prev {
-  left: 0;
+  left: -0.55rem;
 }
 
 .calendar-arrow-next {
-  right: 0;
+  right: -0.55rem;
 }
 
 .arrow-tip {
