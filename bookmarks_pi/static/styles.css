@@ -611,6 +611,11 @@ button:hover {
 .calendar-legend-row > .calendar-settings {
   margin-top: 0;
   flex-shrink: 0;
+  order: -1;
+}
+
+.calendar-legend-row > .calendar-settings[open] {
+  flex-basis: 100%;
 }
 
 .calendar-legend {
