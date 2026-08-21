@@ -99,12 +99,12 @@ def _build_month(
             is_future_or_today and shift_start is not None and _is_rest_day(current, shift_start)
         )
         shift_block_type = None
-        if is_future_or_today:
+        if is_future_or_today and shift_start is not None:
             for start, end, block_type in shift_block_ranges:
                 if start <= current <= end:
                     shift_block_type = block_type
                     break
-            if shift_block_type is None and shift_start is not None and not is_rest_day:
+            if shift_block_type is None and not is_rest_day:
                 shift_block_type = DEFAULT_SHIFT_TYPE
 
         hint_parts = []
