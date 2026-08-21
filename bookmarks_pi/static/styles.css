@@ -746,10 +746,18 @@ button:hover {
 
 /* Sticky notes */
 
-.sticky-notes-section {
+.notes-documents-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  align-items: start;
+  gap: 1rem;
   margin-bottom: 1rem;
   padding-bottom: 1rem;
   border-bottom: 1px solid var(--border);
+}
+
+.notes-documents-row .calendar-settings {
+  margin-top: 0;
 }
 
 .sticky-notes {
