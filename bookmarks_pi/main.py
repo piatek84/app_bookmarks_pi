@@ -14,6 +14,7 @@ from fastapi import Depends, FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+from PIL import Image, ImageOps
 from starlette.middleware.sessions import SessionMiddleware
 
 from . import calendar_service, db, telegram
@@ -145,6 +146,11 @@ STICKY_NOTE_COLORS = {"yellow", "pink", "blue", "green", "orange", "purple"}
 STICKY_NOTE_ROTATION_LIMIT = 45
 STICKY_NOTE_SIZE_MIN = 90
 STICKY_NOTE_SIZE_MAX = 220
+PHOTO_ROTATION_LIMIT = 45
+# Keeps uploaded photos lightweight -- long side capped and re-encoded as a
+# compressed JPEG, since these are decorative frames, not archival copies.
+PHOTO_MAX_DIMENSION = 1000
+PHOTO_JPEG_QUALITY = 78
 
 
 @app.post("/theme")
@@ -200,6 +206,9 @@ def bookmarks_page(
     # (default-position) notes are left either.
     positioned_sticky_notes = [n for n in sticky_notes if n["pos_x"] is not None and n["pos_y"] is not None]
     default_sticky_notes = [n for n in sticky_notes if n["pos_x"] is None or n["pos_y"] is None]
+    photos = db.list_photos(conn, username)
+    positioned_photos = [p for p in photos if p["pos_x"] is not None and p["pos_y"] is not None]
+    default_photos = [p for p in photos if p["pos_x"] is None or p["pos_y"] is None]
     return render(
         request,
         "bookmarks.html",
@@ -220,6 +229,8 @@ def bookmarks_page(
         documents=db.list_documents(conn, username),
         positioned_sticky_notes=positioned_sticky_notes,
         default_sticky_notes=default_sticky_notes,
+        positioned_photos=positioned_photos,
+        default_photos=default_photos,
         open_manage=bool(open_manage),
         open_bookmarks=bool(open_bookmarks),
         open_documents=bool(open_documents),
@@ -657,3 +668,68 @@ def delete_sticky_note(request: Request, note_id: int, conn=Depends(get_db)):
         return RedirectResponse("/", status_code=303)
     db.delete_sticky_note(conn, username, note_id)
     return _redirect_to_bookmarks(fragment="sticky-notes")
+
+
+def _photo_path(username: str, stored_name: str) -> Path:
+    return Path(settings.uploads_path) / username / "photos" / stored_name
+
+
+@app.post("/photos")
+def upload_photo(request: Request, file: UploadFile = File(...), conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    try:
+        image = ImageOps.exif_transpose(Image.open(file.file))
+        image = image.convert("RGB")
+    except Exception:
+        return _redirect_to_bookmarks(fragment="photos")
+    image.thumbnail((PHOTO_MAX_DIMENSION, PHOTO_MAX_DIMENSION))
+    stored_name = f"{uuid.uuid4().hex}.jpg"
+    dest = _photo_path(username, stored_name)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    image.save(dest, "JPEG", quality=PHOTO_JPEG_QUALITY, optimize=True)
+    db.create_photo(conn, username, stored_name)
+    return _redirect_to_bookmarks(fragment="photos")
+
+
+@app.get("/photos/{photo_id}/image")
+def photo_image(request: Request, photo_id: int, conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    row = db.get_photo(conn, username, photo_id)
+    if row is None:
+        return RedirectResponse("/bookmarks", status_code=303)
+    return FileResponse(_photo_path(username, row["stored_name"]))
+
+
+@app.post("/photos/{photo_id}/position")
+def move_photo(request: Request, photo_id: int, x: int = Form(...), y: int = Form(...), conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    db.update_photo_position(conn, username, photo_id, x, y)
+    return _redirect_to_bookmarks(fragment="photos")
+
+
+@app.post("/photos/{photo_id}/rotation")
+def rotate_photo(request: Request, photo_id: int, deg: int = Form(...), conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    deg = max(-PHOTO_ROTATION_LIMIT, min(PHOTO_ROTATION_LIMIT, deg))
+    db.update_photo_rotation(conn, username, photo_id, deg)
+    return _redirect_to_bookmarks(fragment="photos")
+
+
+@app.post("/photos/{photo_id}/delete")
+def delete_photo(request: Request, photo_id: int, conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    row = db.get_photo(conn, username, photo_id)
+    if row is not None:
+        _photo_path(username, row["stored_name"]).unlink(missing_ok=True)
+        db.delete_photo(conn, username, photo_id)
+    return _redirect_to_bookmarks(fragment="photos")

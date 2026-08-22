@@ -117,25 +117,27 @@
     });
   }
 
-  // Sticky notes drag freely anywhere on the page (not just reorder within a
-  // list), so they can float over any other section -- calendar, bookmarks,
-  // documents. Delegated on `document`, since the drop target is the whole
-  // page and, unlike the other setups here, nothing about it depends on
-  // which specific note elements currently exist -- so it's wired up once
-  // and never needs re-binding after an AJAX swap.
-  function setupNoteDrag() {
+  // Sticky notes and photos both drag freely anywhere on the page (not just
+  // reorder within a list), so they can float over any other section --
+  // calendar, bookmarks, documents. Delegated on `document`, since the drop
+  // target is the whole page and, unlike the other setups here, nothing
+  // about it depends on which specific elements currently exist -- so each
+  // is wired up once and never needs re-binding after an AJAX swap.
+  // `shouldSkip` lets a note being edited opt out (photos have no such
+  // state, so they omit it).
+  function setupFreeDrag(selector, endpointPrefix, shouldSkip) {
     var dragEl = null;
     var grabX = 0;
     var grabY = 0;
 
     document.addEventListener("dragstart", function (event) {
-      var note = event.target.closest(".sticky-note[data-id]");
-      if (!note || note.querySelector(".sticky-note-edit-form.editing")) return;
-      dragEl = note;
-      var rect = note.getBoundingClientRect();
+      var el = event.target.closest(selector);
+      if (!el || (shouldSkip && shouldSkip(el))) return;
+      dragEl = el;
+      var rect = el.getBoundingClientRect();
       grabX = event.clientX - rect.left;
       grabY = event.clientY - rect.top;
-      note.classList.add("dragging");
+      el.classList.add("dragging");
       event.dataTransfer.effectAllowed = "move";
       event.dataTransfer.setData("text/plain", "");
     });
@@ -160,7 +162,7 @@
       // -- exactly the page-relative offset a position:absolute left/top
       // needs, however far down the page has been scrolled.
       // Negative x/y is fine and intentional -- .page is centered with room
-      // to spare on wider screens, and notes should be droppable out in
+      // to spare on wider screens, and items should be droppable out in
       // those margins, not just within .page's own box.
       var pageRect = page.getBoundingClientRect();
       var x = Math.round(event.clientX - pageRect.left - grabX);
@@ -168,7 +170,7 @@
       dragEl.style.position = "absolute";
       dragEl.style.left = x + "px";
       dragEl.style.top = y + "px";
-      submitAjax("/notes/" + dragEl.dataset.id + "/position", { x: x, y: y });
+      submitAjax(endpointPrefix + dragEl.dataset.id + "/position", { x: x, y: y });
     });
   }
 
@@ -293,6 +295,18 @@
     });
   }
 
+  // Tracks which photo ids are on the page before a swap, so a photo that
+  // wasn't there before (i.e. one just uploaded) can get the instant-print
+  // entrance animation -- see .photo-frame-new in styles.css. Not attempted
+  // for edits/deletes/repositions of existing photos, only genuinely new ones.
+  function rememberPhotoIds(root) {
+    var ids = {};
+    root.querySelectorAll(".photo-frame[data-id]").forEach(function (el) {
+      ids[el.dataset.id] = true;
+    });
+    return ids;
+  }
+
   function swapFromHtml(html) {
     var doc = new DOMParser().parseFromString(html, "text/html");
     var openCategories = rememberOpenCategories();
@@ -313,8 +327,16 @@
     var oldRow = document.querySelector(".notes-documents-row");
     if (newRow && oldRow) {
       var openDetails = rememberOpenDetails(oldRow);
+      var oldPhotoIds = rememberPhotoIds(oldRow);
       oldRow.replaceWith(newRow);
       applyOpenDetails(newRow, openDetails);
+      newRow.querySelectorAll(".photo-frame[data-id]").forEach(function (el) {
+        if (oldPhotoIds[el.dataset.id]) return;
+        el.classList.add("photo-frame-new");
+        el.addEventListener("animationend", function () {
+          el.classList.remove("photo-frame-new");
+        }, { once: true });
+      });
     }
 
     var newToast = doc.querySelector(".toast");
@@ -435,6 +457,17 @@
       var next = Math.max(-45, Math.min(45, current + Number(rotateBtn.dataset.dir) * 10));
       rotateNote.style.setProperty("--note-rotation", next + "deg");
       submitAjax("/notes/" + rotateNote.dataset.id + "/rotation", { deg: Math.round(next) });
+      return;
+    }
+    // Same idea as the sticky-note rotate buttons above, for photo frames.
+    var photoRotateBtn = event.target.closest(".photo-frame-rotate-btn");
+    if (photoRotateBtn) {
+      var rotatePhoto = photoRotateBtn.closest(".photo-frame[data-id]");
+      if (!rotatePhoto) return;
+      var currentPhoto = parseFloat(getComputedStyle(rotatePhoto).getPropertyValue("--photo-rotation")) || 0;
+      var nextPhoto = Math.max(-45, Math.min(45, currentPhoto + Number(photoRotateBtn.dataset.dir) * 10));
+      rotatePhoto.style.setProperty("--photo-rotation", nextPhoto + "deg");
+      submitAjax("/photos/" + rotatePhoto.dataset.id + "/rotation", { deg: Math.round(nextPhoto) });
     }
   });
 
@@ -504,6 +537,9 @@
   document.addEventListener("DOMContentLoaded", function () {
     initGroups();
     initDocumentDrag();
-    setupNoteDrag();
+    setupFreeDrag(".sticky-note[data-id]", "/notes/", function (note) {
+      return !!note.querySelector(".sticky-note-edit-form.editing");
+    });
+    setupFreeDrag(".photo-frame[data-id]", "/photos/");
   });
 })();

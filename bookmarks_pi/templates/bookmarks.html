@@ -57,6 +57,18 @@
   </div>
 </div>
 {% endmacro %}
+{% macro photo_item(photo) %}
+<div class="photo-frame" data-id="{{ photo['id'] }}" draggable="true"{% if photo['pos_x'] is not none and photo['pos_y'] is not none or photo['rotation'] is not none %} style="{% if photo['pos_x'] is not none and photo['pos_y'] is not none %}position: absolute; left: {{ photo['pos_x'] }}px; top: {{ photo['pos_y'] }}px;{% endif %}{% if photo['rotation'] is not none %}--photo-rotation: {{ photo['rotation'] }}deg;{% endif %}"{% endif %}>
+  <div class="photo-frame-actions">
+    <button type="button" class="photo-frame-rotate-btn" data-dir="-1" aria-label="Rotate left">&#8634;</button>
+    <button type="button" class="photo-frame-rotate-btn" data-dir="1" aria-label="Rotate right">&#8635;</button>
+    <form method="post" action="/photos/{{ photo['id'] }}/delete">
+      <button type="submit" class="photo-frame-delete" aria-label="Delete photo">&times;</button>
+    </form>
+  </div>
+  <img src="/photos/{{ photo['id'] }}/image" alt="" loading="lazy" />
+</div>
+{% endmacro %}
 {% block theme_toggle %}{% endblock %}
 {% block content %}
 <div class="page">
@@ -334,6 +346,33 @@
         <form class="sticky-note sticky-note-add" method="post" action="/notes">
           <textarea name="content" placeholder="New note..." required></textarea>
           <button type="submit">Add note</button>
+        </form>
+      </div>
+    </details>
+    {% endif %}
+  </section>
+
+  <section class="photos-section" id="photos">
+    {% for photo in positioned_photos %}
+    {{ photo_item(photo) }}
+    {% endfor %}
+    {% if default_photos %}
+    <div class="photos">
+      {% for photo in default_photos %}
+      {{ photo_item(photo) }}
+      {% endfor %}
+      <form class="photo-frame photo-frame-add" method="post" action="/photos" enctype="multipart/form-data">
+        <input type="file" name="file" accept="image/*" required />
+        <button type="submit">Add photo</button>
+      </form>
+    </div>
+    {% else %}
+    <details class="calendar-settings" id="photos-settings">
+      <summary>Manage photos</summary>
+      <div class="photos">
+        <form class="photo-frame photo-frame-add" method="post" action="/photos" enctype="multipart/form-data">
+          <input type="file" name="file" accept="image/*" required />
+          <button type="submit">Add photo</button>
         </form>
       </div>
     </details>

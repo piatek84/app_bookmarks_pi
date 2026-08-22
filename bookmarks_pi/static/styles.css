@@ -1182,3 +1182,149 @@ button:hover {
 #sticky-notes-settings .sticky-notes {
   margin-top: 0.75rem;
 }
+
+/* Photos (Polaroid-style frames) */
+
+.photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.1rem;
+}
+
+.photo-frame {
+  position: relative;
+  width: 150px;
+  padding: 10px 10px 32px;
+  background: #fdfdfa;
+  border-radius: 2px;
+  box-shadow: 2px 4px 10px rgba(0, 0, 0, 0.35);
+  /* Falls back to whichever nth-child rule below applies; a photo with a
+     user-chosen rotation gets --photo-rotation set inline, which (being
+     inline) always wins over those class rules -- same trick as .sticky-note. */
+  transform: rotate(var(--photo-rotation, 0deg));
+  transition: transform 0.15s ease;
+  z-index: 5;
+}
+
+.photo-frame[data-id] {
+  cursor: grab;
+}
+
+.photo-frame.dragging {
+  opacity: 0.4;
+}
+
+.photos .photo-frame:nth-child(3n+1) {
+  --photo-rotation: -3deg;
+}
+
+.photos .photo-frame:nth-child(3n+2) {
+  --photo-rotation: 2deg;
+}
+
+.photos .photo-frame:nth-child(3n+3) {
+  --photo-rotation: -1.5deg;
+}
+
+.photo-frame:hover {
+  transform: rotate(0deg) scale(1.03);
+  z-index: 6;
+}
+
+.photo-frame img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  background: #111;
+}
+
+.photo-frame-actions {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.photo-frame:hover .photo-frame-actions,
+.photo-frame:focus-within .photo-frame-actions {
+  opacity: 1;
+}
+
+.photo-frame-actions form {
+  margin: 0;
+}
+
+.photo-frame-rotate-btn,
+.photo-frame-delete {
+  background: rgba(0, 0, 0, 0.55);
+  border: none;
+  color: #fff;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  line-height: 1;
+  font-size: 0.7rem;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo-frame-rotate-btn:hover,
+.photo-frame-delete:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.photo-frame-add {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 150px;
+  background: transparent;
+  border: 1px dashed var(--border);
+  box-shadow: none;
+}
+
+.photo-frame-add input[type="file"] {
+  max-width: 100%;
+  padding: 0.4rem;
+  font-size: 0.65rem;
+  color: var(--fg);
+}
+
+.photo-frame-add button {
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+}
+
+#photos-settings .photos {
+  margin-top: 0.75rem;
+}
+
+/* Instant-print entrance: a freshly uploaded photo slides down out of a
+   "slot" and fades in, like a print easing out of an instant camera. Only
+   applied by JS (see drag.js) to a photo that wasn't in the page before the
+   upload -- never replayed on a plain reload. */
+@keyframes photo-eject {
+  from {
+    transform: translateY(-65%) rotate(var(--photo-rotation, 0deg));
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) rotate(var(--photo-rotation, 0deg));
+    opacity: 1;
+  }
+}
+
+.photo-frame.photo-frame-new {
+  animation: photo-eject 0.6s ease-out;
+}

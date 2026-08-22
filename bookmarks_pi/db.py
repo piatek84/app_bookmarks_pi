@@ -121,6 +121,17 @@ CREATE TABLE IF NOT EXISTS sticky_notes (
     created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_sticky_notes_owner ON sticky_notes (owner_username);
+
+CREATE TABLE IF NOT EXISTS photos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    owner_username TEXT NOT NULL,
+    stored_name TEXT NOT NULL,
+    pos_x INTEGER,
+    pos_y INTEGER,
+    rotation INTEGER,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_photos_owner ON photos (owner_username);
 """
 
 
@@ -798,6 +809,56 @@ def delete_sticky_note(conn: sqlite3.Connection, owner_username: str, note_id: i
     cursor = conn.execute(
         "DELETE FROM sticky_notes WHERE id = ? AND owner_username = ?",
         (note_id, owner_username),
+    )
+    conn.commit()
+    return cursor.rowcount > 0
+
+
+def create_photo(conn: sqlite3.Connection, owner_username: str, stored_name: str) -> sqlite3.Row:
+    cursor = conn.execute(
+        "INSERT INTO photos (owner_username, stored_name, created_at) VALUES (?, ?, ?)",
+        (owner_username, stored_name, _now()),
+    )
+    conn.commit()
+    return conn.execute("SELECT * FROM photos WHERE id = ?", (cursor.lastrowid,)).fetchone()
+
+
+def list_photos(conn: sqlite3.Connection, owner_username: str) -> list[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM photos WHERE owner_username = ? ORDER BY created_at",
+        (owner_username,),
+    ).fetchall()
+
+
+def get_photo(conn: sqlite3.Connection, owner_username: str, photo_id: int) -> Optional[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM photos WHERE id = ? AND owner_username = ?",
+        (photo_id, owner_username),
+    ).fetchone()
+
+
+def update_photo_position(conn: sqlite3.Connection, owner_username: str, photo_id: int, x: int, y: int) -> bool:
+    cursor = conn.execute(
+        "UPDATE photos SET pos_x = ?, pos_y = ? WHERE id = ? AND owner_username = ?",
+        (x, y, photo_id, owner_username),
+    )
+    conn.commit()
+    return cursor.rowcount > 0
+
+
+def update_photo_rotation(conn: sqlite3.Connection, owner_username: str, photo_id: int, rotation: int) -> bool:
+    cursor = conn.execute(
+        "UPDATE photos SET rotation = ? WHERE id = ? AND owner_username = ?",
+        (rotation, photo_id, owner_username),
+    )
+    conn.commit()
+    return cursor.rowcount > 0
+
+
+def delete_photo(conn: sqlite3.Connection, owner_username: str, photo_id: int) -> bool:
+    cursor = conn.execute(
+        "DELETE FROM photos WHERE id = ? AND owner_username = ?",
+        (photo_id, owner_username),
     )
     conn.commit()
     return cursor.rowcount > 0
