@@ -151,6 +151,9 @@ PHOTO_ROTATION_LIMIT = 45
 # compressed JPEG, since these are decorative frames, not archival copies.
 PHOTO_MAX_DIMENSION = 1000
 PHOTO_JPEG_QUALITY = 78
+# Rejects the upload outright above this, before decoding it -- a cheap guard
+# against a phone photo straight off the camera (10-20 MB) landing here.
+PHOTO_MAX_UPLOAD_BYTES = 1 * 1024 * 1024
 
 
 @app.post("/theme")
@@ -180,6 +183,7 @@ def bookmarks_page(
     name: Optional[str] = None,
     url: Optional[str] = None,
     month_offset: int = 0,
+    error: Optional[str] = None,
 ):
     username = _current_username(request)
     if not username:
@@ -236,7 +240,7 @@ def bookmarks_page(
         open_documents=bool(open_documents),
         open_more_category=open_more,
         undo=_build_undo_context(undo, title, month, day, start_date, end_date, category, name, url),
-        error=None,
+        error=error,
     )
 
 
@@ -679,6 +683,11 @@ def upload_photo(request: Request, file: UploadFile = File(...), conn=Depends(ge
     username = _current_username(request)
     if not username:
         return RedirectResponse("/", status_code=303)
+    file.file.seek(0, 2)
+    upload_size = file.file.tell()
+    file.file.seek(0)
+    if upload_size > PHOTO_MAX_UPLOAD_BYTES:
+        return _redirect_to_bookmarks(fragment="photos", error="Photo is too large (max 1 MB).")
     try:
         image = ImageOps.exif_transpose(Image.open(file.file))
         image = image.convert("RGB")

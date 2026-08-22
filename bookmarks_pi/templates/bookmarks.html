@@ -124,6 +124,10 @@
       <button type="submit">Undo</button>
     </form>
   </div>
+  {% elif error %}
+  <div class="toast">
+    <span>{{ error }}</span>
+  </div>
   {% endif %}
 
   <section class="calendar-section" id="calendar-section">
@@ -418,8 +422,6 @@
       <button type="submit">Add bookmark</button>
     </form>
   </details>
-
-  {% if error %}<p class="error">{{ error }}</p>{% endif %}
 
   <div class="bookmark-groups">
     {% for category, items in bookmarks_by_category.items() %}

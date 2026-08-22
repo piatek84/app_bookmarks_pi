@@ -1113,6 +1113,16 @@ button:hover {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+  /* Without an explicit height the form only takes up as much vertical
+     space as its content needs, so the color/rotate controls and Save/Cancel
+     stay pinned right under the textarea instead of tracking the note's box
+     as it's resized -- growing the note left them stranded partway down with
+     empty space below, shrinking it clipped them under overflow: hidden.
+     Filling the note's full (resized) height lets the column's flex:1
+     textarea absorb the size change so the controls stay pinned to the
+     bottom edge. */
+  height: 100%;
+  box-sizing: border-box;
 }
 
 .sticky-note-edit-form:target + .sticky-note-view,
