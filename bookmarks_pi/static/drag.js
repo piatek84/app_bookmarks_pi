@@ -542,4 +542,23 @@
     });
     setupFreeDrag(".photo-frame[data-id]", "/photos/");
   });
+
+  // A polaroid photo occasionally shows as a broken image on load, especially
+  // when several load at once over a flaky connection (Tailscale/mobile data
+  // to the Pi rather than plain LAN). `error` events don't bubble, so this
+  // has to listen on the document with capture: true to catch every
+  // .photo-frame img. One retry after a short delay, with a cache-busting
+  // query param so it's a fresh request rather than replaying the same
+  // failed one -- past that, leave the broken icon rather than retrying
+  // forever against a photo that's genuinely gone (e.g. deleted elsewhere).
+  document.addEventListener("error", function (event) {
+    var img = event.target;
+    if (!(img instanceof HTMLImageElement) || !img.closest(".photo-frame")) return;
+    if (img.dataset.retried) return;
+    img.dataset.retried = "1";
+    var baseSrc = img.src.split("?")[0];
+    setTimeout(function () {
+      img.src = baseSrc + "?retry=" + Date.now();
+    }, 800);
+  }, true);
 })();

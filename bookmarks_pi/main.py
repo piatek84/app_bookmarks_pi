@@ -711,7 +711,15 @@ def photo_image(request: Request, photo_id: int, conn=Depends(get_db)):
     row = db.get_photo(conn, username, photo_id)
     if row is None:
         return RedirectResponse("/bookmarks", status_code=303)
-    return FileResponse(_photo_path(username, row["stored_name"]))
+    # A given photo_id's bytes never change after upload (rotating/moving it
+    # only touches DB columns, and editing means delete + re-upload under a
+    # new id) -- caching indefinitely means a reload showing several photos
+    # only ever re-fetches genuinely new ones from the Pi instead of hitting
+    # it, and every previously-loaded one, again on every page load.
+    return FileResponse(
+        _photo_path(username, row["stored_name"]),
+        headers={"Cache-Control": "private, max-age=31536000, immutable"},
+    )
 
 
 @app.post("/photos/{photo_id}/position")
