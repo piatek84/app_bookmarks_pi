@@ -2,7 +2,7 @@
 {% block title %}{{ username }}'s bookmarks{% endblock %}
 {% macro bookmark_item(bookmark) %}
 <li data-id="{{ bookmark['id'] }}">
-  <a href="{{ bookmark['url'] }}" target="_blank" rel="noreferrer">{{ bookmark['name'] }}</a>
+  <a href="{{ bookmark['url'] }}" target="_blank" rel="noreferrer" title="{{ bookmark['name'] }}">{{ bookmark['name'] }}</a>
   <span class="bookmark-actions">
     <a href="#edit-bookmark-{{ bookmark['id'] }}" class="edit-btn" aria-label="Edit {{ bookmark['name'] }}"><span class="edit-icon">&#9998;</span></a>
     <form method="post" action="/bookmarks/{{ bookmark['id'] }}/delete">

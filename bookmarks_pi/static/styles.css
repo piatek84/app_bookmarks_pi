@@ -192,6 +192,13 @@ button:hover {
 .bookmark-list a {
   color: var(--fg);
   text-decoration: none;
+  /* min-width: 0 overrides the flex item default of min-width: auto, which
+     otherwise sizes to the text's full intrinsic width and never lets it
+     shrink enough for overflow: hidden/text-overflow to kick in. */
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .bookmark-list a:hover {
@@ -304,6 +311,9 @@ button:hover {
   display: flex;
   align-items: center;
   gap: 0.35rem;
+  /* Never shrinks to make room for the ellipsis on a long name -- the name
+     is what should give way, not the edit/delete buttons. */
+  flex-shrink: 0;
 }
 
 .edit-btn,
