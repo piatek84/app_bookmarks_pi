@@ -2,6 +2,7 @@
 one SQLite file. No JS -- forms post back to the server and pages re-render.
 """
 import re
+import secrets
 import shutil
 import sqlite3
 import urllib.parse
@@ -10,7 +11,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Iterator, Optional
 
-from fastapi import Depends, FastAPI, File, Form, Request, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -742,3 +743,33 @@ def delete_photo(request: Request, photo_id: int, conn=Depends(get_db)):
         _photo_path(username, row["stored_name"]).unlink(missing_ok=True)
         db.delete_photo(conn, username, photo_id)
     return _redirect_to_bookmarks(fragment="photos")
+
+
+# Reminder sync API -- lets the separate MyReminder Android app read/write the
+# "first" (oldest, same ordering db.list_sticky_notes already uses) sticky
+# note without going through the Telegram login flow. Auth is a single shared
+# secret (REMINDER_API_KEY) rather than a session cookie, since there's no
+# browser involved; both env vars are required, so the routes 503 rather than
+# silently doing nothing on a deployment that hasn't opted in.
+def _require_reminder_api(request: Request) -> None:
+    if not settings.reminder_api_key or not settings.reminder_api_username:
+        raise HTTPException(status_code=503, detail="Reminder API is not configured")
+    provided = request.headers.get("X-API-Key", "")
+    if not secrets.compare_digest(provided, settings.reminder_api_key):
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
+
+@app.get("/api/reminder", dependencies=[Depends(_require_reminder_api)])
+def get_reminder(conn=Depends(get_db)):
+    notes = db.list_sticky_notes(conn, settings.reminder_api_username)
+    return {"content": notes[0]["content"] if notes else None}
+
+
+@app.post("/api/reminder", dependencies=[Depends(_require_reminder_api)])
+def set_reminder(content: str = Form(...), conn=Depends(get_db)):
+    notes = db.list_sticky_notes(conn, settings.reminder_api_username)
+    if notes:
+        db.update_sticky_note(conn, settings.reminder_api_username, notes[0]["id"], content)
+    else:
+        db.create_sticky_note(conn, settings.reminder_api_username, content)
+    return {"content": content}

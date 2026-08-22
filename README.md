@@ -50,6 +50,16 @@ app_bookmarks_pi/
 All three are scoped per `owner_username`, same as bookmarks -- each user's
 calendar is private to them.
 
+## Reminder sync API
+
+`GET /api/reminder` / `POST /api/reminder` (form field `content`) let the
+separate MyReminder Android app read/write the oldest sticky note without
+going through the Telegram login flow -- auth is a shared secret header
+(`X-API-Key`) instead of a session cookie. Both `REMINDER_API_KEY` and
+`REMINDER_API_USERNAME` must be set in `.env` or the routes 503. `POST`
+creates the first sticky note if the user has none yet, otherwise updates the
+oldest one.
+
 ## Running locally
 
 ```bash

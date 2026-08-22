@@ -1,6 +1,7 @@
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 
 from dotenv import load_dotenv
 
@@ -17,6 +18,8 @@ class Settings:
     uploads_path: str
     login_code_ttl_seconds: int
     login_code_length: int
+    reminder_api_key: Optional[str]
+    reminder_api_username: Optional[str]
 
 
 def _require(name: str) -> str:
@@ -35,4 +38,9 @@ def load_settings() -> Settings:
         uploads_path=os.environ.get("UPLOADS_PATH", str(DEFAULT_UPLOADS_PATH)),
         login_code_ttl_seconds=int(os.environ.get("LOGIN_CODE_TTL_SECONDS", "300")),
         login_code_length=int(os.environ.get("LOGIN_CODE_LENGTH", "6")),
+        # Both optional -- the /api/reminder endpoints (used by the MyReminder
+        # Android app to sync its text with the first sticky note) are
+        # disabled entirely until both are set.
+        reminder_api_key=os.environ.get("REMINDER_API_KEY"),
+        reminder_api_username=os.environ.get("REMINDER_API_USERNAME"),
     )

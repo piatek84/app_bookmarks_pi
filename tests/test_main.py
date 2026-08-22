@@ -3,6 +3,7 @@ toast -> restore round trip and the "keep the manage panel open" behaviour,
 since those are stitched together through redirect query params rather than
 a database flag.
 """
+import dataclasses
 import os
 import tempfile
 from unittest.mock import patch
@@ -16,7 +17,7 @@ from starlette.testclient import TestClient
 
 from bookmarks_pi import db, main
 
-TABLES = ["users", "login_codes", "bookmarks", "birthdays", "vacations", "holidays", "tasks", "work_shifts", "shift_blocks", "category_order"]
+TABLES = ["users", "login_codes", "bookmarks", "birthdays", "vacations", "holidays", "tasks", "work_shifts", "shift_blocks", "category_order", "sticky_notes"]
 
 
 @pytest.fixture
@@ -395,3 +396,54 @@ def test_deleting_a_shift_block_removes_it(client):
     conn = db.open_connection(main.settings.database_path)
     assert db.list_shift_blocks(conn, "juan") == []
     conn.close()
+
+
+def test_reminder_api_is_disabled_without_configuration(client):
+    # The `client` fixture doesn't set REMINDER_API_KEY/REMINDER_API_USERNAME,
+    # so main.settings.reminder_api_key/reminder_api_username are None here.
+    assert client.get("/api/reminder").status_code == 503
+    assert client.post("/api/reminder", data={"content": "hi"}).status_code == 503
+
+
+def test_reminder_api_rejects_missing_or_wrong_key(client, monkeypatch):
+    monkeypatch.setattr(main, "settings", dataclasses.replace(main.settings, reminder_api_key="secret", reminder_api_username="juan"))
+
+    assert client.get("/api/reminder").status_code == 401
+    assert client.get("/api/reminder", headers={"X-API-Key": "wrong"}).status_code == 401
+    assert client.get("/api/reminder", headers={"X-API-Key": "secret"}).status_code == 200
+
+
+def test_reminder_api_get_returns_null_content_when_no_notes_exist(client, monkeypatch):
+    monkeypatch.setattr(main, "settings", dataclasses.replace(main.settings, reminder_api_key="secret", reminder_api_username="juan"))
+
+    r = client.get("/api/reminder", headers={"X-API-Key": "secret"})
+    assert r.json() == {"content": None}
+
+
+def test_reminder_api_post_creates_the_first_note_when_none_exists(client, monkeypatch):
+    monkeypatch.setattr(main, "settings", dataclasses.replace(main.settings, reminder_api_key="secret", reminder_api_username="juan"))
+
+    r = client.post("/api/reminder", headers={"X-API-Key": "secret"}, data={"content": "Buy milk"})
+    assert r.json() == {"content": "Buy milk"}
+
+    conn = db.open_connection(main.settings.database_path)
+    notes = db.list_sticky_notes(conn, "juan")
+    conn.close()
+    assert [n["content"] for n in notes] == ["Buy milk"]
+
+
+def test_reminder_api_post_updates_the_oldest_note_when_one_already_exists(client, monkeypatch):
+    monkeypatch.setattr(main, "settings", dataclasses.replace(main.settings, reminder_api_key="secret", reminder_api_username="juan"))
+    client.post("/notes", data={"content": "Original note"})
+    client.post("/notes", data={"content": "Second note"})
+
+    r = client.post("/api/reminder", headers={"X-API-Key": "secret"}, data={"content": "Updated note"})
+    assert r.json() == {"content": "Updated note"}
+
+    conn = db.open_connection(main.settings.database_path)
+    notes = db.list_sticky_notes(conn, "juan")
+    conn.close()
+    assert [n["content"] for n in notes] == ["Updated note", "Second note"]
+
+    r = client.get("/api/reminder", headers={"X-API-Key": "secret"})
+    assert r.json() == {"content": "Updated note"}
