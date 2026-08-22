@@ -104,6 +104,18 @@ def test_task_is_marked_on_its_specific_date():
     assert _find_day(months, 10)["task_title"] is None
 
 
+def test_task_emoji_is_extracted_from_its_title():
+    tasks = [{"task_date": "2026-01-20", "title": "🎂 Buy cake"}]
+    months = calendar_service.build_calendar_months(date(2026, 1, 15), 1, [], [], None, tasks=tasks)
+    assert _find_day(months, 20)["task_emoji"] == "🎂"
+
+
+def test_task_emoji_is_none_when_title_has_no_emoji():
+    tasks = [{"task_date": "2026-01-20", "title": "Buy groceries"}]
+    months = calendar_service.build_calendar_months(date(2026, 1, 15), 1, [], [], None, tasks=tasks)
+    assert _find_day(months, 20)["task_emoji"] is None
+
+
 def test_hint_combines_every_event_on_the_day():
     birthdays = [{"month": 1, "day": 20, "title": "Alex"}]
     holidays = [{"month": 1, "day": 20, "title": "Andalucía"}]

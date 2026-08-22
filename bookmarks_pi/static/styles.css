@@ -628,6 +628,18 @@ button:hover {
   background: var(--task);
 }
 
+/* A task title with an emoji shows that instead of the plain dot -- reset
+   the dot's size/shape/background so only the emoji glyph renders. */
+.task-marker-emoji {
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: none;
+  font-size: 0.65rem;
+  line-height: 1;
+  vertical-align: middle;
+}
+
 .calendar-legend-row {
   display: flex;
   flex-wrap: wrap;

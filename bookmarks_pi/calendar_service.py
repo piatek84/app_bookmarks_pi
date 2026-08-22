@@ -2,6 +2,7 @@
 today/past, birthdays, vacations, or work-shift rest days.
 """
 import calendar as stdlib_calendar
+import re
 from datetime import date, timedelta
 from typing import Optional
 
@@ -9,6 +10,29 @@ WORK_DAYS = 6
 REST_DAYS = 3
 CYCLE_LENGTH = WORK_DAYS + REST_DAYS
 DEFAULT_SHIFT_TYPE = "morning"
+
+# A task whose title contains an emoji shows that emoji on the calendar day
+# instead of the plain red dot (see .task-marker-emoji in styles.css) -- lets
+# a task read at a glance ("🎂 Buy cake" marks the day with a cake, not a dot).
+_EMOJI_PATTERN = re.compile(
+    "["
+    "\U0001F300-\U0001F5FF"  # symbols & pictographs
+    "\U0001F600-\U0001F64F"  # emoticons
+    "\U0001F680-\U0001F6FF"  # transport & map
+    "\U0001F900-\U0001F9FF"  # supplemental symbols & pictographs
+    "\U0001FA70-\U0001FAFF"  # symbols & pictographs extended-A
+    "\U0001F1E6-\U0001F1FF"  # regional indicator symbols (flags)
+    "\U00002600-\U000026FF"  # misc symbols
+    "\U00002700-\U000027BF"  # dingbats
+    "\U00002300-\U000023FF"  # misc technical (hourglass, watch, alarm clock)
+    "\U00002B00-\U00002BFF"  # misc symbols & arrows (stars, etc.)
+    "]"
+)
+
+
+def _extract_emoji(text: str) -> Optional[str]:
+    match = _EMOJI_PATTERN.search(text)
+    return match.group(0) if match else None
 
 
 def _add_months(first_of_month: date, months: int) -> date:
@@ -89,6 +113,7 @@ def _build_month(
         birthday_title = birthday_lookup.get((current.month, current.day)) if is_future_or_today else None
         holiday_title = holiday_lookup.get((current.month, current.day)) if is_future_or_today else None
         task_title = task_lookup.get(current) if is_future_or_today else None
+        task_emoji = _extract_emoji(task_title) if task_title else None
         vacation_title = None
         if is_future_or_today:
             for start, end, title in vacation_ranges:
@@ -132,6 +157,7 @@ def _build_month(
                 "is_rest_day": is_rest_day,
                 "shift_block_type": shift_block_type,
                 "task_title": task_title,
+                "task_emoji": task_emoji,
                 "hint": "\n".join(hint_parts) if hint_parts else None,
             }
         )

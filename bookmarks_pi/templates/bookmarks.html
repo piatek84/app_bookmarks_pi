@@ -147,7 +147,7 @@
               <span
                 class="day{% if day.is_past %} past-day{% endif %}{% if day.is_today %} current-day{% endif %}{% if day.birthday_title %} birthday-day{% endif %}{% if day.holiday_title %} holiday-day{% endif %}{% if day.vacation_title %} vacation-day{% endif %}{% if day.is_rest_day %} rest-day{% endif %}{% if day.shift_block_type %} shift-{{ day.shift_block_type }}{% endif %}"
                 {% if day.hint %}title="{{ day.hint }}"{% endif %}
-              >{{ day.day }}{% if day.task_title %}<span class="task-marker"></span>{% endif %}</span>
+              >{{ day.day }}{% if day.task_emoji %}<span class="task-marker task-marker-emoji">{{ day.task_emoji }}</span>{% elif day.task_title %}<span class="task-marker"></span>{% endif %}</span>
               {% endif %}
             {% endfor %}
           {% endfor %}
