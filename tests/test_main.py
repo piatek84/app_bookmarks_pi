@@ -337,6 +337,31 @@ def test_deleting_a_birthday_redirects_to_the_calendar_anchor(client):
     assert r.headers["location"].endswith("#calendar-settings")
 
 
+def test_adding_a_bookmark_normalizes_the_category(client):
+    client.post("/bookmarks", data={"category": "  Cool Apps  ", "name": "Example", "url": "https://example.com"})
+    conn = db.open_connection(main.settings.database_path)
+    categories = db.list_categories(conn, "juan")
+    conn.close()
+    assert categories == ["cool apps"]
+
+
+def test_renaming_a_category_redirects_to_its_new_anchor(client):
+    client.post("/bookmarks", data={"category": "apps", "name": "A", "url": "https://a.dev"})
+
+    r = client.post(
+        "/bookmarks/categories/rename",
+        data={"category": "apps", "new_category": "  Tools  "},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    assert r.headers["location"].endswith("#category-tools")
+
+    conn = db.open_connection(main.settings.database_path)
+    categories = db.list_categories(conn, "juan")
+    conn.close()
+    assert categories == ["tools"]
+
+
 def test_moving_a_category_redirects_to_its_own_anchor(client):
     client.post("/bookmarks", data={"category": "apps", "name": "A", "url": "https://a.dev"})
     client.post("/bookmarks", data={"category": "sports", "name": "B", "url": "https://b.dev"})

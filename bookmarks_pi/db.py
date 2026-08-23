@@ -227,6 +227,13 @@ def verify_login_code(conn: sqlite3.Connection, username: str, code: str) -> boo
     return True
 
 
+def normalize_category(category: str) -> str:
+    """Categories are matched by exact string, so without this a stray
+    trailing space or a different capitalization would silently create a
+    second, duplicate-looking category instead of reusing the existing one."""
+    return category.strip().lower()
+
+
 def _ensure_category_position(conn: sqlite3.Connection, owner_username: str, category: str) -> None:
     existing = conn.execute(
         "SELECT 1 FROM category_order WHERE owner_username = ? AND category = ?",
@@ -304,6 +311,7 @@ def move_category(conn: sqlite3.Connection, owner_username: str, category: str, 
         (owner_username,),
     ).fetchall()
     categories = [row["category"] for row in rows]
+    category = normalize_category(category)
     if category not in categories:
         return
     index = categories.index(category)
@@ -320,13 +328,62 @@ def move_category(conn: sqlite3.Connection, owner_username: str, category: str, 
 
 
 def reorder_categories(conn: sqlite3.Connection, owner_username: str, ordered_categories: list[str]) -> None:
-    for index, category in enumerate(ordered_categories):
+    for index, category in enumerate(normalize_category(c) for c in ordered_categories):
         conn.execute(
             """INSERT INTO category_order (owner_username, category, position) VALUES (?, ?, ?)
                ON CONFLICT(owner_username, category) DO UPDATE SET position = excluded.position""",
             (owner_username, category, index),
         )
     conn.commit()
+
+
+def rename_category(conn: sqlite3.Connection, owner_username: str, old_category: str, new_category: str) -> bool:
+    """Renames every bookmark filed under old_category to new_category. If
+    new_category already exists (after normalizing), merges old_category's
+    bookmarks into it -- appended after its existing ones -- rather than
+    erroring, since two categories can't coexist under the same normalized
+    name."""
+    old_category = normalize_category(old_category)
+    new_category = normalize_category(new_category)
+    if not new_category or old_category == new_category:
+        return False
+    has_old = conn.execute(
+        "SELECT 1 FROM bookmarks WHERE owner_username = ? AND category = ?",
+        (owner_username, old_category),
+    ).fetchone()
+    if has_old is None:
+        return False
+    merging = conn.execute(
+        "SELECT 1 FROM bookmarks WHERE owner_username = ? AND category = ?",
+        (owner_username, new_category),
+    ).fetchone() is not None
+    if merging:
+        rows = conn.execute(
+            "SELECT id FROM bookmarks WHERE owner_username = ? AND category = ? ORDER BY position",
+            (owner_username, old_category),
+        ).fetchall()
+        next_position = _next_bookmark_position(conn, owner_username, new_category)
+        for row in rows:
+            conn.execute(
+                "UPDATE bookmarks SET category = ?, position = ? WHERE id = ?",
+                (new_category, next_position, row["id"]),
+            )
+            next_position += 1
+        conn.execute(
+            "DELETE FROM category_order WHERE owner_username = ? AND category = ?",
+            (owner_username, old_category),
+        )
+    else:
+        conn.execute(
+            "UPDATE bookmarks SET category = ? WHERE owner_username = ? AND category = ?",
+            (new_category, owner_username, old_category),
+        )
+        conn.execute(
+            "UPDATE category_order SET category = ? WHERE owner_username = ? AND category = ?",
+            (new_category, owner_username, old_category),
+        )
+    conn.commit()
+    return True
 
 
 def _next_bookmark_position(conn: sqlite3.Connection, owner_username: str, category: str) -> int:
@@ -338,6 +395,7 @@ def _next_bookmark_position(conn: sqlite3.Connection, owner_username: str, categ
 
 
 def create_bookmark(conn: sqlite3.Connection, owner_username: str, category: str, name: str, url: str) -> sqlite3.Row:
+    category = normalize_category(category)
     position = _next_bookmark_position(conn, owner_username, category)
     cursor = conn.execute(
         "INSERT INTO bookmarks (owner_username, category, name, url, position, created_at) VALUES (?, ?, ?, ?, ?, ?)",
@@ -349,6 +407,7 @@ def create_bookmark(conn: sqlite3.Connection, owner_username: str, category: str
 
 
 def reorder_bookmarks(conn: sqlite3.Connection, owner_username: str, category: str, ordered_ids: list[int]) -> None:
+    category = normalize_category(category)
     for index, bookmark_id in enumerate(ordered_ids):
         conn.execute(
             "UPDATE bookmarks SET position = ? WHERE id = ? AND owner_username = ? AND category = ?",
@@ -362,6 +421,7 @@ def move_bookmark(
 ) -> bool:
     """Drags `bookmark_id` into `category` (possibly its current one) and applies
     `ordered_ids` -- the full drop-target list's new id order -- as positions."""
+    category = normalize_category(category)
     existing = get_bookmark(conn, owner_username, bookmark_id)
     if existing is None:
         return False
@@ -401,6 +461,7 @@ def get_bookmark(conn: sqlite3.Connection, owner_username: str, bookmark_id: int
 def update_bookmark(
     conn: sqlite3.Connection, owner_username: str, bookmark_id: int, category: str, name: str, url: str
 ) -> bool:
+    category = normalize_category(category)
     existing = get_bookmark(conn, owner_username, bookmark_id)
     if existing is None:
         return False

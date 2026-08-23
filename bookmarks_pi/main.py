@@ -440,7 +440,7 @@ def add_bookmark(
     username = _current_username(request)
     if not username:
         return RedirectResponse("/", status_code=303)
-    db.create_bookmark(conn, username, category, name, url)
+    db.create_bookmark(conn, username, db.normalize_category(category), name, url)
     return _redirect_to_bookmarks(open_bookmarks=1, fragment="bookmarks-settings")
 
 
@@ -457,6 +457,7 @@ def edit_bookmark(
     username = _current_username(request)
     if not username:
         return RedirectResponse("/", status_code=303)
+    category = db.normalize_category(category)
     db.update_bookmark(conn, username, bookmark_id, category, name, url)
     return _redirect_to_bookmarks(
         fragment=f"category-{slugify(category)}", open_more=category if open_more else None
@@ -487,6 +488,7 @@ def restore_bookmark(request: Request, category: str = Form(...), name: str = Fo
     username = _current_username(request)
     if not username:
         return RedirectResponse("/", status_code=303)
+    category = db.normalize_category(category)
     db.create_bookmark(conn, username, category, name, url)
     return _redirect_to_bookmarks(fragment=f"category-{slugify(category)}")
 
@@ -505,6 +507,24 @@ def move_category(
     db.move_category(conn, username, category, -1 if direction == "up" else 1)
     return _redirect_to_bookmarks(
         fragment=f"category-{slugify(category)}", open_more=category if open_more else None
+    )
+
+
+@app.post("/bookmarks/categories/rename")
+def rename_category(
+    request: Request,
+    category: str = Form(...),
+    new_category: str = Form(...),
+    open_more: Optional[str] = Form(None),
+    conn=Depends(get_db),
+):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    new_category = db.normalize_category(new_category)
+    db.rename_category(conn, username, category, new_category)
+    return _redirect_to_bookmarks(
+        fragment=f"category-{slugify(new_category)}", open_more=new_category if open_more else None
     )
 
 

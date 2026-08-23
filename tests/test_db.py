@@ -232,6 +232,60 @@ def test_move_category_backfills_positions_for_legacy_categories():
     assert list(db.list_bookmarks_grouped_by_category(conn, "juan").keys()) == ["zzz-legacy", "aaa-legacy"]
 
 
+def test_create_bookmark_normalizes_category(conn):
+    db.create_bookmark(conn, "juan", "  Reading  ", "Blog", "https://blog.dev")
+    assert db.list_categories(conn, "juan") == ["reading"]
+
+
+def test_update_bookmark_normalizes_category(conn):
+    bookmark = db.create_bookmark(conn, "juan", "reading", "Blog", "https://blog.dev")
+    db.update_bookmark(conn, "juan", bookmark["id"], "  TOOLS  ", "Blog", "https://blog.dev")
+    assert db.list_categories(conn, "juan") == ["tools"]
+
+
+def test_rename_category_renames_all_its_bookmarks():
+    conn = db.open_connection(":memory:")
+    conn.executescript(db.SCHEMA)
+    db.create_bookmark(conn, "juan", "apps", "A", "https://a.dev")
+    db.create_bookmark(conn, "juan", "apps", "B", "https://b.dev")
+    db.create_bookmark(conn, "juan", "sports", "C", "https://c.dev")
+
+    assert db.rename_category(conn, "juan", "apps", "  Tools  ") is True
+    grouped = db.list_bookmarks_grouped_by_category(conn, "juan")
+    assert list(grouped.keys()) == ["tools", "sports"]
+    assert [bm["name"] for bm in grouped["tools"]] == ["A", "B"]
+
+
+def test_rename_category_preserves_order_position():
+    conn = db.open_connection(":memory:")
+    conn.executescript(db.SCHEMA)
+    db.create_bookmark(conn, "juan", "apps", "A", "https://a.dev")
+    db.create_bookmark(conn, "juan", "sports", "B", "https://b.dev")
+    db.create_bookmark(conn, "juan", "youtube", "C", "https://c.dev")
+
+    db.rename_category(conn, "juan", "sports", "games")
+    assert list(db.list_bookmarks_grouped_by_category(conn, "juan").keys()) == ["apps", "games", "youtube"]
+
+
+def test_rename_category_merges_into_existing_category():
+    conn = db.open_connection(":memory:")
+    conn.executescript(db.SCHEMA)
+    db.create_bookmark(conn, "juan", "apps", "A", "https://a.dev")
+    db.create_bookmark(conn, "juan", "tools", "B", "https://b.dev")
+
+    assert db.rename_category(conn, "juan", "apps", "tools") is True
+    grouped = db.list_bookmarks_grouped_by_category(conn, "juan")
+    assert list(grouped.keys()) == ["tools"]
+    assert [bm["name"] for bm in grouped["tools"]] == ["B", "A"]
+
+
+def test_rename_category_is_noop_for_missing_or_unchanged_category(conn):
+    db.create_bookmark(conn, "juan", "apps", "A", "https://a.dev")
+    assert db.rename_category(conn, "juan", "ghost", "tools") is False
+    assert db.rename_category(conn, "juan", "apps", "  APPS  ") is False
+    assert db.list_categories(conn, "juan") == ["apps"]
+
+
 def test_birthdays_crud_and_scoping(conn):
     birthday = db.create_birthday(conn, "juan", "Alex", 6, 1)
     assert birthday["month"] == 6
