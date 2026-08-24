@@ -63,7 +63,10 @@ def build_calendar_months(
 ) -> list[dict]:
     birthday_lookup = {(b["month"], b["day"]): b["title"] for b in birthdays}
     holiday_lookup = {(h["month"], h["day"]): h["title"] for h in holidays}
-    task_lookup = {date.fromisoformat(t["task_date"]): t["title"] for t in tasks}
+    task_ranges = [
+        (date.fromisoformat(t["task_date"]), date.fromisoformat(t["end_date"]), t["title"])
+        for t in tasks
+    ]
     vacation_ranges = [
         (date.fromisoformat(v["start_date"]), date.fromisoformat(v["end_date"]), v["title"])
         for v in vacations
@@ -89,7 +92,7 @@ def build_calendar_months(
                 holiday_lookup,
                 vacation_ranges,
                 shift_start_date,
-                task_lookup,
+                task_ranges,
                 shift_block_ranges,
             )
         )
@@ -103,7 +106,7 @@ def _build_month(
     holiday_lookup,
     vacation_ranges,
     shift_start: Optional[date],
-    task_lookup,
+    task_ranges,
     shift_block_ranges,
 ) -> dict:
     days_in_month = stdlib_calendar.monthrange(first_day.year, first_day.month)[1]
@@ -115,7 +118,12 @@ def _build_month(
         is_future_or_today = current >= today
         birthday_title = birthday_lookup.get((current.month, current.day)) if is_future_or_today else None
         holiday_title = holiday_lookup.get((current.month, current.day)) if is_future_or_today else None
-        task_title = task_lookup.get(current) if is_future_or_today else None
+        task_title = None
+        if is_future_or_today:
+            for start, end, title in task_ranges:
+                if start <= current <= end:
+                    task_title = title
+                    break
         task_emoji = _extract_emoji(task_title) if task_title else None
         vacation_title = None
         if is_future_or_today:

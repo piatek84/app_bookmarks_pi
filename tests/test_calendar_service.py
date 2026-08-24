@@ -98,26 +98,36 @@ def test_past_days_are_not_marked():
 
 
 def test_task_is_marked_on_its_specific_date():
-    tasks = [{"task_date": "2026-01-20", "title": "Buy groceries"}]
+    tasks = [{"task_date": "2026-01-20", "end_date": "2026-01-20", "title": "Buy groceries"}]
     months = calendar_service.build_calendar_months(date(2026, 1, 15), 1, [], [], None, tasks=tasks)
     assert _find_day(months, 20)["task_title"] == "Buy groceries"
     assert _find_day(months, 10)["task_title"] is None
 
 
+def test_task_range_is_marked_on_every_day_it_spans():
+    tasks = [{"task_date": "2026-01-18", "end_date": "2026-01-20", "title": "Report"}]
+    months = calendar_service.build_calendar_months(date(2026, 1, 15), 1, [], [], None, tasks=tasks)
+    assert _find_day(months, 18)["task_title"] == "Report"
+    assert _find_day(months, 19)["task_title"] == "Report"
+    assert _find_day(months, 20)["task_title"] == "Report"
+    assert _find_day(months, 21)["task_title"] is None
+    assert _find_day(months, 17)["task_title"] is None
+
+
 def test_task_emoji_is_extracted_from_its_title():
-    tasks = [{"task_date": "2026-01-20", "title": "🎂 Buy cake"}]
+    tasks = [{"task_date": "2026-01-20", "end_date": "2026-01-20", "title": "🎂 Buy cake"}]
     months = calendar_service.build_calendar_months(date(2026, 1, 15), 1, [], [], None, tasks=tasks)
     assert _find_day(months, 20)["task_emoji"] == "🎂"
 
 
 def test_task_emoji_is_none_when_title_has_no_emoji():
-    tasks = [{"task_date": "2026-01-20", "title": "Buy groceries"}]
+    tasks = [{"task_date": "2026-01-20", "end_date": "2026-01-20", "title": "Buy groceries"}]
     months = calendar_service.build_calendar_months(date(2026, 1, 15), 1, [], [], None, tasks=tasks)
     assert _find_day(months, 20)["task_emoji"] is None
 
 
 def test_task_emoji_keeps_both_halves_of_a_flag():
-    tasks = [{"task_date": "2026-01-20", "title": "🇬🇷 Greece trip"}]
+    tasks = [{"task_date": "2026-01-20", "end_date": "2026-01-20", "title": "🇬🇷 Greece trip"}]
     months = calendar_service.build_calendar_months(date(2026, 1, 15), 1, [], [], None, tasks=tasks)
     assert _find_day(months, 20)["task_emoji"] == "🇬🇷"
 
@@ -125,7 +135,7 @@ def test_task_emoji_keeps_both_halves_of_a_flag():
 def test_hint_combines_every_event_on_the_day():
     birthdays = [{"month": 1, "day": 20, "title": "Alex"}]
     holidays = [{"month": 1, "day": 20, "title": "Andalucía"}]
-    tasks = [{"task_date": "2026-01-20", "title": "Buy groceries"}]
+    tasks = [{"task_date": "2026-01-20", "end_date": "2026-01-20", "title": "Buy groceries"}]
     months = calendar_service.build_calendar_months(date(2026, 1, 15), 1, birthdays, [], None, holidays, tasks)
     hint = _find_day(months, 20)["hint"]
     assert "Birthday: Alex" in hint

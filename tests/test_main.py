@@ -174,6 +174,14 @@ def test_adding_a_task_shows_it_in_the_manage_panel(client):
     assert "2026-09-01 - Buy groceries" in r.text
 
 
+def test_adding_a_task_with_an_end_date_shows_the_range(client):
+    r = client.post(
+        "/calendar/tasks", data={"title": "Conference", "task_date": "2026-09-01", "end_date": "2026-09-03"}
+    )
+    assert r.status_code == 200
+    assert "2026-09-01 → 2026-09-03 - Conference" in r.text
+
+
 def test_deleting_a_task_shows_undo_toast_and_restores_it(client):
     client.post("/calendar/tasks", data={"title": "Buy groceries", "task_date": "2026-09-01"})
     conn = db.open_connection(main.settings.database_path)

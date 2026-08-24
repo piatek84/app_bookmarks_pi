@@ -86,6 +86,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     owner_username TEXT NOT NULL,
     title TEXT NOT NULL,
     task_date TEXT NOT NULL,
+    end_date TEXT NOT NULL,
     created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_tasks_owner ON tasks (owner_username);
@@ -157,6 +158,11 @@ def _migrate(conn: sqlite3.Connection) -> None:
     shift_columns = {row[1] for row in conn.execute("PRAGMA table_info(work_shifts)").fetchall()}
     if "enabled" not in shift_columns:
         conn.execute("ALTER TABLE work_shifts ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1")
+
+    task_columns = {row[1] for row in conn.execute("PRAGMA table_info(tasks)").fetchall()}
+    if "end_date" not in task_columns:
+        conn.execute("ALTER TABLE tasks ADD COLUMN end_date TEXT")
+        conn.execute("UPDATE tasks SET end_date = task_date WHERE end_date IS NULL")
 
     document_columns = {row[1] for row in conn.execute("PRAGMA table_info(documents)").fetchall()}
     if "position" not in document_columns:
@@ -634,10 +640,12 @@ def delete_holiday(conn: sqlite3.Connection, owner_username: str, holiday_id: in
     return cursor.rowcount > 0
 
 
-def create_task(conn: sqlite3.Connection, owner_username: str, title: str, task_date: str) -> sqlite3.Row:
+def create_task(
+    conn: sqlite3.Connection, owner_username: str, title: str, task_date: str, end_date: Optional[str] = None
+) -> sqlite3.Row:
     cursor = conn.execute(
-        "INSERT INTO tasks (owner_username, title, task_date, created_at) VALUES (?, ?, ?, ?)",
-        (owner_username, title, task_date, _now()),
+        "INSERT INTO tasks (owner_username, title, task_date, end_date, created_at) VALUES (?, ?, ?, ?, ?)",
+        (owner_username, title, task_date, end_date or task_date, _now()),
     )
     conn.commit()
     return conn.execute("SELECT * FROM tasks WHERE id = ?", (cursor.lastrowid,)).fetchone()

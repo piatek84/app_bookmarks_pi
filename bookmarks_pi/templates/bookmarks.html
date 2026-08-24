@@ -263,12 +263,13 @@
           <form class="calendar-form" method="post" action="/calendar/tasks">
             <input placeholder="Task" name="title" required />
             <input name="task_date" type="date" required />
+            <input name="end_date" type="date" placeholder="End date (optional)" />
             <button type="submit">Add</button>
           </form>
           <ul class="calendar-list">
             {% for t in tasks %}
             <li>
-              <span>{{ t['task_date'] }} - {{ t['title'] }}</span>
+              <span>{{ t['task_date'] }}{% if t['end_date'] and t['end_date'] != t['task_date'] %} → {{ t['end_date'] }}{% endif %} - {{ t['title'] }}</span>
               <form method="post" action="/calendar/tasks/{{ t['id'] }}/delete">
                 <button type="submit" class="delete-btn" aria-label="Delete {{ t['title'] }}">&times;</button>
               </form>

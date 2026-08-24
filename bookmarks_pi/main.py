@@ -105,7 +105,11 @@ def _build_undo_context(
     if undo == "vacation" and None not in (title, start_date, end_date):
         return {"label": f'vacation "{title}"', "action": "/calendar/vacations/restore", "fields": {"title": title, "start_date": start_date, "end_date": end_date}}
     if undo == "task" and None not in (title, start_date):
-        return {"label": f'task "{title}"', "action": "/calendar/tasks/restore", "fields": {"title": title, "task_date": start_date}}
+        return {
+            "label": f'task "{title}"',
+            "action": "/calendar/tasks/restore",
+            "fields": {"title": title, "task_date": start_date, "end_date": end_date or start_date},
+        }
     if undo == "bookmark" and None not in (category, name, url):
         return {"label": f'bookmark "{name}"', "action": "/bookmarks/restore", "fields": {"category": category, "name": name, "url": url}}
     return None
@@ -310,11 +314,17 @@ def restore_holiday(request: Request, title: str = Form(...), month: int = Form(
 
 
 @app.post("/calendar/tasks")
-def add_task(request: Request, title: str = Form(...), task_date: str = Form(...), conn=Depends(get_db)):
+def add_task(
+    request: Request,
+    title: str = Form(...),
+    task_date: str = Form(...),
+    end_date: Optional[str] = Form(None),
+    conn=Depends(get_db),
+):
     username = _current_username(request)
     if not username:
         return RedirectResponse("/", status_code=303)
-    db.create_task(conn, username, title, task_date)
+    db.create_task(conn, username, title, task_date, end_date)
     return _redirect_to_bookmarks(open_manage=1, fragment="calendar-settings")
 
 
@@ -328,16 +338,27 @@ def delete_task(request: Request, task_id: int, conn=Depends(get_db)):
         return _redirect_to_bookmarks(open_manage=1, fragment="calendar-settings")
     db.delete_task(conn, username, task_id)
     return _redirect_to_bookmarks(
-        open_manage=1, undo="task", title=row["title"], start_date=row["task_date"], fragment="calendar-settings"
+        open_manage=1,
+        undo="task",
+        title=row["title"],
+        start_date=row["task_date"],
+        end_date=row["end_date"],
+        fragment="calendar-settings",
     )
 
 
 @app.post("/calendar/tasks/restore")
-def restore_task(request: Request, title: str = Form(...), task_date: str = Form(...), conn=Depends(get_db)):
+def restore_task(
+    request: Request,
+    title: str = Form(...),
+    task_date: str = Form(...),
+    end_date: Optional[str] = Form(None),
+    conn=Depends(get_db),
+):
     username = _current_username(request)
     if not username:
         return RedirectResponse("/", status_code=303)
-    db.create_task(conn, username, title, task_date)
+    db.create_task(conn, username, title, task_date, end_date)
     return _redirect_to_bookmarks(open_manage=1, fragment="calendar-settings")
 
 
