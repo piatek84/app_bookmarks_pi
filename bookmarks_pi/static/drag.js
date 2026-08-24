@@ -172,6 +172,71 @@
       dragEl.style.top = y + "px";
       submitAjax(endpointPrefix + dragEl.dataset.id + "/position", { x: x, y: y });
     });
+
+    // The native HTML5 Drag and Drop API used above has no touch equivalent --
+    // touch/pen users get no dragstart at all, so notes and photos are stuck
+    // in place on mobile/tablet. Pointer Events cover touch and pen too, so
+    // this re-implements the same "grab and reposition" behavior for them,
+    // scoped to non-mouse pointers so it never runs alongside (and can't
+    // conflict with) the native drag path mouse users already get above.
+    var touchDragEl = null;
+    var touchPointerId = null;
+    var touchGrabX = 0;
+    var touchGrabY = 0;
+    var touchMoved = false;
+    // Taps on these should stay taps (edit/cancel links, rotate/color/delete
+    // buttons, the note's own textarea) rather than starting a drag.
+    var interactiveSelector = "a, button, input, textarea, select";
+
+    document.addEventListener("pointerdown", function (event) {
+      if (event.pointerType === "mouse") return;
+      var el = event.target.closest(selector);
+      if (!el || (shouldSkip && shouldSkip(el))) return;
+      if (event.target.closest(interactiveSelector)) return;
+      touchDragEl = el;
+      touchPointerId = event.pointerId;
+      touchMoved = false;
+      var rect = el.getBoundingClientRect();
+      touchGrabX = event.clientX - rect.left;
+      touchGrabY = event.clientY - rect.top;
+      el.setPointerCapture(touchPointerId);
+    });
+
+    document.addEventListener("pointermove", function (event) {
+      if (!touchDragEl || event.pointerId !== touchPointerId) return;
+      event.preventDefault();
+      touchMoved = true;
+      touchDragEl.classList.add("dragging");
+      var page = touchDragEl.closest(".page");
+      if (!page) return;
+      var pageRect = page.getBoundingClientRect();
+      var x = Math.round(event.clientX - pageRect.left - touchGrabX);
+      var y = Math.round(event.clientY - pageRect.top - touchGrabY);
+      touchDragEl.style.position = "absolute";
+      touchDragEl.style.left = x + "px";
+      touchDragEl.style.top = y + "px";
+    });
+
+    document.addEventListener("pointerup", function (event) {
+      if (!touchDragEl || event.pointerId !== touchPointerId) return;
+      var el = touchDragEl;
+      var moved = touchMoved;
+      el.classList.remove("dragging");
+      el.releasePointerCapture(touchPointerId);
+      touchDragEl = null;
+      touchPointerId = null;
+      if (!moved) return; // a plain tap, not a drag -- nothing changed
+      var x = parseInt(el.style.left, 10);
+      var y = parseInt(el.style.top, 10);
+      submitAjax(endpointPrefix + el.dataset.id + "/position", { x: x, y: y });
+    });
+
+    document.addEventListener("pointercancel", function (event) {
+      if (!touchDragEl || event.pointerId !== touchPointerId) return;
+      touchDragEl.classList.remove("dragging");
+      touchDragEl = null;
+      touchPointerId = null;
+    });
   }
 
   function setupDragReorder(container, selector, ignoreSelector, datasetKey, onDrop) {

@@ -953,6 +953,16 @@ button:hover {
   cursor: grab;
 }
 
+/* Stops the browser from scrolling the page on a touch-drag so drag.js's
+   pointer-based fallback (native HTML5 drag-and-drop has no touch equivalent)
+   gets the gesture instead. Keyed off draggable="true" rather than [data-id]
+   so it's automatically lifted while a note is being edited/resized, when JS
+   flips draggable to "false" -- otherwise scrolling/typing in the textarea
+   would be blocked too. */
+.sticky-note[draggable="true"] {
+  touch-action: none;
+}
+
 .sticky-note.dragging {
   opacity: 0.4;
 }
@@ -1073,6 +1083,12 @@ button:hover {
   font-weight: 400;
   white-space: pre-wrap;
   word-break: break-word;
+  /* Otherwise a touch-drag's long-press-ish start triggers the browser's own
+     text-selection loupe before drag.js's pointer handler gets a chance to
+     move the note. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .sticky-note-actions {
@@ -1242,6 +1258,12 @@ button:hover {
   cursor: grab;
 }
 
+/* Same touch-drag fallback as .sticky-note above -- photos have no edit mode
+   to gate around, so this is unconditional. */
+.photo-frame[draggable="true"] {
+  touch-action: none;
+}
+
 .photo-frame.dragging {
   opacity: 0.4;
 }
@@ -1269,6 +1291,12 @@ button:hover {
   aspect-ratio: 1 / 1;
   object-fit: cover;
   background: #111;
+  /* Otherwise a touch-drag's long-press-ish start triggers the browser's own
+     "save/share image" callout or text-selection loupe before drag.js's
+     pointer handler gets a chance to move the photo. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .photo-frame-actions {
