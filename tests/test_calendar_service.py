@@ -116,6 +116,12 @@ def test_task_emoji_is_none_when_title_has_no_emoji():
     assert _find_day(months, 20)["task_emoji"] is None
 
 
+def test_task_emoji_keeps_both_halves_of_a_flag():
+    tasks = [{"task_date": "2026-01-20", "title": "🇬🇷 Greece trip"}]
+    months = calendar_service.build_calendar_months(date(2026, 1, 15), 1, [], [], None, tasks=tasks)
+    assert _find_day(months, 20)["task_emoji"] == "🇬🇷"
+
+
 def test_hint_combines_every_event_on_the_day():
     birthdays = [{"month": 1, "day": 20, "title": "Alex"}]
     holidays = [{"month": 1, "day": 20, "title": "Andalucía"}]

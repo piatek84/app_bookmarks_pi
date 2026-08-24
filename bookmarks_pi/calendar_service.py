@@ -15,13 +15,16 @@ DEFAULT_SHIFT_TYPE = "morning"
 # instead of the plain red dot (see .task-marker-emoji in styles.css) -- lets
 # a task read at a glance ("🎂 Buy cake" marks the day with a cake, not a dot).
 _EMOJI_PATTERN = re.compile(
-    "["
+    # A flag is two regional-indicator symbols combined (e.g. \U0001F1EC\U0001F1F7
+    # for GR = 🇬🇷); matched as a pair first so both halves are kept together.
+    "[\U0001F1E6-\U0001F1FF]{2}"
+    "|["
     "\U0001F300-\U0001F5FF"  # symbols & pictographs
     "\U0001F600-\U0001F64F"  # emoticons
     "\U0001F680-\U0001F6FF"  # transport & map
     "\U0001F900-\U0001F9FF"  # supplemental symbols & pictographs
     "\U0001FA70-\U0001FAFF"  # symbols & pictographs extended-A
-    "\U0001F1E6-\U0001F1FF"  # regional indicator symbols (flags)
+    "\U0001F1E6-\U0001F1FF"  # lone regional indicator symbol
     "\U00002600-\U000026FF"  # misc symbols
     "\U00002700-\U000027BF"  # dingbats
     "\U00002300-\U000023FF"  # misc technical (hourglass, watch, alarm clock)
