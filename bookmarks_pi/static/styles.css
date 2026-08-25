@@ -101,6 +101,12 @@ h2 {
      any other section -- calendar, bookmarks, documents -- not just their
      own .sticky-notes box. */
   position: relative;
+  /* Flex items default to min-width: auto, i.e. they refuse to shrink
+     below their content's min-content size even when a smaller width is
+     set above -- a wide-enough child (e.g. .bookmark-groups with several
+     columns) would otherwise stretch .page, and with it the whole page,
+     past the 1120px cap. */
+  min-width: 0;
 }
 
 label {
@@ -290,14 +296,19 @@ button:hover {
 
 .bookmark-groups {
   display: grid;
-  grid-template-columns: repeat(var(--bookmark-columns, 4), minmax(240px, 1fr));
+  /* minmax(0, 1fr), not minmax(240px, 1fr): a fixed 240px floor is what was
+     pushing 5-6 columns wider than the page and shoving everything else
+     sideways. With 0 as the floor, columns always share the container's
+     actual width evenly and just get narrower at higher column counts. */
+  grid-template-columns: repeat(var(--bookmark-columns, 4), minmax(0, 1fr));
   gap: 1rem;
   margin-top: 1rem;
+  min-width: 0;
 }
 
 /* The chosen column count only applies above this width -- a phone screen
-   can't fit even 2 columns of 240px each without overflowing, so it always
-   falls back to a single column regardless of the saved preference. */
+   is too narrow to keep more than one column readable, so it always falls
+   back to a single column regardless of the saved preference. */
 @media (max-width: 700px) {
   .bookmark-groups {
     grid-template-columns: 1fr;
