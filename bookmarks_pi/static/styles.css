@@ -275,25 +275,6 @@ button:hover {
   gap: 0.25rem;
 }
 
-.category-reorder button {
-  padding: 0.15rem 0.4rem;
-  font-size: 0.7rem;
-  background: transparent;
-  color: var(--muted);
-  border: 1px solid var(--border);
-}
-
-.category-reorder button:hover:not(:disabled) {
-  color: var(--fg);
-  border-color: var(--fg);
-  opacity: 1;
-}
-
-.category-reorder button:disabled {
-  opacity: 0.3;
-  cursor: default;
-}
-
 .bookmark-more {
   margin-top: 0.5rem;
 }

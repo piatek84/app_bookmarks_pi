@@ -442,16 +442,6 @@
         <div class="category-reorder">
           <a href="#rename-category-{{ category|slugify }}" class="edit-btn" aria-label="Rename {{ category }}"><span class="edit-icon">&#9998;</span></a>
           <a href="#delete-category-{{ category|slugify }}" class="delete-btn" aria-label="Delete {{ category }}">&times;</a>
-          <form method="post" action="/bookmarks/categories/move">
-            <input type="hidden" name="category" value="{{ category }}" />
-            <input type="hidden" name="direction" value="up" />
-            <button type="submit" {% if loop.first %}disabled{% endif %} aria-label="Move {{ category }} earlier">&uarr;</button>
-          </form>
-          <form method="post" action="/bookmarks/categories/move">
-            <input type="hidden" name="category" value="{{ category }}" />
-            <input type="hidden" name="direction" value="down" />
-            <button type="submit" {% if loop.last %}disabled{% endif %} aria-label="Move {{ category }} later">&darr;</button>
-          </form>
         </div>
       </div>
       <div id="rename-category-{{ category|slugify }}" class="modal-overlay">

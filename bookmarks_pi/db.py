@@ -290,49 +290,6 @@ def _sync_category_positions(conn: sqlite3.Connection, owner_username: str) -> N
     conn.commit()
 
 
-def move_category(conn: sqlite3.Connection, owner_username: str, category: str, direction: int) -> None:
-    """direction: -1 moves the category earlier, +1 moves it later.
-
-    Only considers categories that currently have at least one bookmark:
-    category_order keeps a row for every category ever used, even after its
-    last bookmark is deleted or recategorized, so ignoring that filter would
-    swap against invisible "ghost" categories and appear to do nothing.
-
-    Renumbers every visible category sequentially afterwards instead of
-    swapping the two raw position values: stale data can leave two
-    categories sharing the same position (e.g. from an old reorder that
-    skipped one of them), and swapping two equal values is a no-op that
-    looks like the button did nothing. Renumbering also self-heals that
-    corruption for the rest of the list on every move.
-    """
-    _sync_category_positions(conn, owner_username)
-    rows = conn.execute(
-        """SELECT co.category FROM category_order co
-           WHERE co.owner_username = ?
-             AND EXISTS (
-                 SELECT 1 FROM bookmarks b
-                 WHERE b.owner_username = co.owner_username AND b.category = co.category
-             )
-           ORDER BY co.position, co.category""",
-        (owner_username,),
-    ).fetchall()
-    categories = [row["category"] for row in rows]
-    category = normalize_category(category)
-    if category not in categories:
-        return
-    index = categories.index(category)
-    swap_index = index + direction
-    if swap_index < 0 or swap_index >= len(categories):
-        return
-    categories[index], categories[swap_index] = categories[swap_index], categories[index]
-    for position, cat in enumerate(categories):
-        conn.execute(
-            "UPDATE category_order SET position = ? WHERE owner_username = ? AND category = ?",
-            (position, owner_username, cat),
-        )
-    conn.commit()
-
-
 def reorder_categories(conn: sqlite3.Connection, owner_username: str, ordered_categories: list[str]) -> None:
     for index, category in enumerate(normalize_category(c) for c in ordered_categories):
         conn.execute(

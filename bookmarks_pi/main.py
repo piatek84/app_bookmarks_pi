@@ -688,23 +688,6 @@ def restore_bookmark(request: Request, category: str = Form(...), name: str = Fo
     return _redirect_to_bookmarks(fragment=f"category-{slugify(category)}")
 
 
-@app.post("/bookmarks/categories/move")
-def move_category(
-    request: Request,
-    category: str = Form(...),
-    direction: str = Form(...),
-    open_more: Optional[str] = Form(None),
-    conn=Depends(get_db),
-):
-    username = _current_username(request)
-    if not username:
-        return RedirectResponse("/", status_code=303)
-    db.move_category(conn, username, category, -1 if direction == "up" else 1)
-    return _redirect_to_bookmarks(
-        fragment=f"category-{slugify(category)}", open_more=category if open_more else None
-    )
-
-
 @app.post("/bookmarks/categories/rename")
 def rename_category(
     request: Request,

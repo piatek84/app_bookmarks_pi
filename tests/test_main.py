@@ -235,15 +235,6 @@ def test_manage_bookmarks_panel_is_collapsed_by_default(client):
     assert "Manage bookmarks" in r.text
 
 
-def test_move_category_reorders_bookmark_sections(client):
-    client.post("/bookmarks", data={"category": "apps", "name": "A", "url": "https://a.dev"})
-    client.post("/bookmarks", data={"category": "sports", "name": "B", "url": "https://b.dev"})
-
-    r = client.post("/bookmarks/categories/move", data={"category": "sports", "direction": "up"})
-    assert r.status_code == 200
-    assert r.text.index(">sports<") < r.text.index(">apps<")
-
-
 def test_reorder_categories_endpoint_sets_full_order(client):
     client.post("/bookmarks", data={"category": "apps", "name": "A", "url": "https://a.dev"})
     client.post("/bookmarks", data={"category": "sports", "name": "B", "url": "https://b.dev"})
@@ -368,15 +359,6 @@ def test_renaming_a_category_redirects_to_its_new_anchor(client):
     categories = db.list_categories(conn, "juan")
     conn.close()
     assert categories == ["tools"]
-
-
-def test_moving_a_category_redirects_to_its_own_anchor(client):
-    client.post("/bookmarks", data={"category": "apps", "name": "A", "url": "https://a.dev"})
-    client.post("/bookmarks", data={"category": "sports", "name": "B", "url": "https://b.dev"})
-
-    r = client.post("/bookmarks/categories/move", data={"category": "sports", "direction": "up"}, follow_redirects=False)
-    assert r.status_code == 303
-    assert r.headers["location"].endswith("#category-sports")
 
 
 def test_deleting_a_category_removes_it_and_all_its_bookmarks(client):

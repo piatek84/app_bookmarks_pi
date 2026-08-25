@@ -193,28 +193,7 @@ def test_updating_a_bookmark_into_a_new_category_appends_at_the_end(conn):
     assert [bm["name"] for bm in grouped["sports"]] == ["Existing", "Moved"]
 
 
-def test_move_category_swaps_positions():
-    conn = db.open_connection(":memory:")
-    conn.executescript(db.SCHEMA)
-    db.create_bookmark(conn, "juan", "apps", "A", "https://a.dev")
-    db.create_bookmark(conn, "juan", "sports", "B", "https://b.dev")
-    db.create_bookmark(conn, "juan", "youtube", "C", "https://c.dev")
-
-    db.move_category(conn, "juan", "youtube", -1)
-    assert list(db.list_bookmarks_grouped_by_category(conn, "juan").keys()) == ["apps", "youtube", "sports"]
-
-    db.move_category(conn, "juan", "youtube", -1)
-    assert list(db.list_bookmarks_grouped_by_category(conn, "juan").keys()) == ["youtube", "apps", "sports"]
-
-    # already first: moving further up is a no-op
-    db.move_category(conn, "juan", "youtube", -1)
-    assert list(db.list_bookmarks_grouped_by_category(conn, "juan").keys()) == ["youtube", "apps", "sports"]
-
-    db.move_category(conn, "juan", "youtube", 1)
-    assert list(db.list_bookmarks_grouped_by_category(conn, "juan").keys()) == ["apps", "youtube", "sports"]
-
-
-def test_move_category_backfills_positions_for_legacy_categories():
+def test_list_bookmarks_grouped_by_category_backfills_positions_for_legacy_categories():
     conn = db.open_connection(":memory:")
     conn.executescript(db.SCHEMA)
     # simulate bookmarks that predate the category_order table
@@ -228,8 +207,8 @@ def test_move_category_backfills_positions_for_legacy_categories():
     )
     conn.commit()
 
-    db.move_category(conn, "juan", "zzz-legacy", -1)
-    assert list(db.list_bookmarks_grouped_by_category(conn, "juan").keys()) == ["zzz-legacy", "aaa-legacy"]
+    # backfilled alphabetically since neither category has an explicit position yet
+    assert list(db.list_bookmarks_grouped_by_category(conn, "juan").keys()) == ["aaa-legacy", "zzz-legacy"]
 
 
 def test_create_bookmark_normalizes_category(conn):
