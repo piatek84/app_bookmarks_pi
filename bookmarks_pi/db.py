@@ -392,6 +392,23 @@ def rename_category(conn: sqlite3.Connection, owner_username: str, old_category:
     return True
 
 
+def delete_category(conn: sqlite3.Connection, owner_username: str, category: str) -> int:
+    """Deletes every bookmark filed under `category` and drops the category
+    itself. Returns how many bookmarks were removed, so the caller can
+    report it back to the user."""
+    category = normalize_category(category)
+    count = conn.execute(
+        "SELECT COUNT(*) AS c FROM bookmarks WHERE owner_username = ? AND category = ?",
+        (owner_username, category),
+    ).fetchone()["c"]
+    conn.execute("DELETE FROM bookmarks WHERE owner_username = ? AND category = ?", (owner_username, category))
+    conn.execute(
+        "DELETE FROM category_order WHERE owner_username = ? AND category = ?", (owner_username, category)
+    )
+    conn.commit()
+    return count
+
+
 def _next_bookmark_position(conn: sqlite3.Connection, owner_username: str, category: str) -> int:
     max_position = conn.execute(
         "SELECT COALESCE(MAX(position), -1) AS m FROM bookmarks WHERE owner_username = ? AND category = ?",

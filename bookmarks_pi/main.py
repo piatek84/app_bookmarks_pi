@@ -469,6 +469,16 @@ def add_bookmark(
     return _redirect_to_bookmarks(open_bookmarks=1, fragment="bookmarks-settings")
 
 
+@app.post("/bookmarks/categories/delete")
+def delete_category(request: Request, category: str = Form(...), conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    deleted = db.delete_category(conn, username, category)
+    summary = f'Deleted category "{category}" and {deleted} bookmark{"s" if deleted != 1 else ""}.'
+    return _redirect_to_bookmarks(open_bookmarks=1, fragment="bookmarks-settings", error=summary)
+
+
 @app.post("/bookmarks/{bookmark_id}/edit")
 def edit_bookmark(
     request: Request,

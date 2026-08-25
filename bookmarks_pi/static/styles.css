@@ -458,6 +458,18 @@ button:hover {
   border-color: var(--fg);
 }
 
+.modal p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.danger-btn {
+  background: #c0392b;
+  border-color: #c0392b;
+  color: #fff;
+}
+
 .icon-buttons {
   display: flex;
   gap: 0.5rem;

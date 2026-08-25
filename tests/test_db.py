@@ -286,6 +286,25 @@ def test_rename_category_is_noop_for_missing_or_unchanged_category(conn):
     assert db.list_categories(conn, "juan") == ["apps"]
 
 
+def test_delete_category_removes_its_bookmarks_and_leaves_others_untouched(conn):
+    db.create_bookmark(conn, "juan", "apps", "A", "https://a.dev")
+    db.create_bookmark(conn, "juan", "apps", "B", "https://b.dev")
+    db.create_bookmark(conn, "juan", "sports", "C", "https://c.dev")
+
+    assert db.delete_category(conn, "juan", "apps") == 2
+    assert db.list_categories(conn, "juan") == ["sports"]
+    assert [bm["name"] for bm in db.list_bookmarks(conn, "juan")] == ["C"]
+
+
+def test_delete_category_is_scoped_per_owner(conn):
+    db.create_bookmark(conn, "juan", "apps", "A", "https://a.dev")
+    db.create_bookmark(conn, "other", "apps", "B", "https://b.dev")
+
+    assert db.delete_category(conn, "juan", "apps") == 1
+    assert db.list_categories(conn, "juan") == []
+    assert db.list_categories(conn, "other") == ["apps"]
+
+
 def test_birthdays_crud_and_scoping(conn):
     birthday = db.create_birthday(conn, "juan", "Alex", 6, 1)
     assert birthday["month"] == 6

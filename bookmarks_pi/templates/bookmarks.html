@@ -441,6 +441,7 @@
         <h2>{{ category }}</h2>
         <div class="category-reorder">
           <a href="#rename-category-{{ category|slugify }}" class="edit-btn" aria-label="Rename {{ category }}"><span class="edit-icon">&#9998;</span></a>
+          <a href="#delete-category-{{ category|slugify }}" class="delete-btn" aria-label="Delete {{ category }}">&times;</a>
           <form method="post" action="/bookmarks/categories/move">
             <input type="hidden" name="category" value="{{ category }}" />
             <input type="hidden" name="direction" value="up" />
@@ -463,6 +464,20 @@
             <div class="modal-actions">
               <a href="#" class="cancel-btn">Cancel</a>
               <button type="submit">Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div id="delete-category-{{ category|slugify }}" class="modal-overlay">
+        <a href="#" class="modal-backdrop" aria-label="Close"></a>
+        <div class="modal">
+          <h2>Delete category</h2>
+          <p>Delete "{{ category }}" and its {{ items|length }} bookmark{{ 's' if items|length != 1 else '' }}? This can't be undone.</p>
+          <form method="post" action="/bookmarks/categories/delete">
+            <input type="hidden" name="category" value="{{ category }}" />
+            <div class="modal-actions">
+              <a href="#" class="cancel-btn">Cancel</a>
+              <button type="submit" class="danger-btn">Delete</button>
             </div>
           </form>
         </div>

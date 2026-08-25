@@ -379,6 +379,23 @@ def test_moving_a_category_redirects_to_its_own_anchor(client):
     assert r.headers["location"].endswith("#category-sports")
 
 
+def test_deleting_a_category_removes_it_and_all_its_bookmarks(client):
+    client.post("/bookmarks", data={"category": "apps", "name": "A", "url": "https://a.dev"})
+    client.post("/bookmarks", data={"category": "apps", "name": "B", "url": "https://b.dev"})
+    client.post("/bookmarks", data={"category": "sports", "name": "C", "url": "https://c.dev"})
+
+    r = client.post("/bookmarks/categories/delete", data={"category": "apps"})
+    assert r.status_code == 200
+    assert "Deleted category" in r.text and "apps" in r.text and "2 bookmarks" in r.text
+
+    conn = db.open_connection(main.settings.database_path)
+    categories = db.list_categories(conn, "juan")
+    remaining_urls = {row["url"] for row in db.list_bookmarks(conn, "juan")}
+    conn.close()
+    assert categories == ["sports"]
+    assert remaining_urls == {"https://c.dev"}
+
+
 def test_work_shift_can_be_saved_enabled_and_disabled(client):
     r = client.post("/calendar/shift", data={"start_date": "2026-01-01", "enabled": "on"})
     assert r.status_code == 200
