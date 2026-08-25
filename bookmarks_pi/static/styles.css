@@ -151,6 +151,30 @@ button:hover {
   min-width: 120px;
 }
 
+.edit-mode-toggle {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+
+.edit-mode-toggle input {
+  padding: 0;
+}
+
+.bookmark-groups .edit-btn,
+.bookmark-groups .delete-btn {
+  display: none;
+}
+
+.bookmark-groups.edit-mode .edit-btn,
+.bookmark-groups.edit-mode .delete-btn {
+  display: inline-flex;
+}
+
 .bookmark-import-export {
   display: flex;
   gap: 1rem;

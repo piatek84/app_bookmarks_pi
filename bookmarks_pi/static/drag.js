@@ -578,6 +578,26 @@
     submitAjax(form.action, fields);
   });
 
+  var EDIT_MODE_KEY = "bookmarks-edit-mode";
+
+  function isEditModeOn() {
+    try {
+      return localStorage.getItem(EDIT_MODE_KEY) === "1";
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // The edit/delete buttons on bookmarks and categories are hidden by
+  // default (reordering is drag-and-drop only) and shown via this toggle.
+  // .bookmark-groups gets replaced wholesale on every AJAX action (see
+  // swapFromHtml), so the "on" state lives in localStorage and is
+  // reapplied here rather than on the element itself.
+  function applyEditMode() {
+    var groups = document.querySelector(".bookmark-groups");
+    if (groups) groups.classList.toggle("edit-mode", isEditModeOn());
+  }
+
   function initGroups() {
     var categoriesContainer = document.querySelector(".bookmark-groups");
     if (categoriesContainer) {
@@ -586,6 +606,7 @@
       });
       setupBookmarkDrag(categoriesContainer);
     }
+    applyEditMode();
   }
 
   // Re-run after every AJAX swap, same as initGroups, since .notes-documents-row
@@ -602,10 +623,23 @@
   document.addEventListener("DOMContentLoaded", function () {
     initGroups();
     initDocumentDrag();
+    var editToggle = document.getElementById("bookmark-edit-mode-toggle");
+    if (editToggle) editToggle.checked = isEditModeOn();
     setupFreeDrag(".sticky-note[data-id]", "/notes/", function (note) {
       return !!note.querySelector(".sticky-note-edit-form.editing");
     });
     setupFreeDrag(".photo-frame[data-id]", "/photos/");
+  });
+
+  document.addEventListener("change", function (event) {
+    var toggle = event.target.closest("#bookmark-edit-mode-toggle");
+    if (!toggle) return;
+    try {
+      localStorage.setItem(EDIT_MODE_KEY, toggle.checked ? "1" : "0");
+    } catch (e) {
+      // ignore -- worst case the toggle doesn't persist across reloads
+    }
+    applyEditMode();
   });
 
   // A polaroid photo occasionally shows as a broken image on load, especially
