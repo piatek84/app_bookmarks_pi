@@ -480,3 +480,65 @@ def test_reminder_api_post_updates_the_oldest_note_when_one_already_exists(clien
 
     r = client.get("/api/reminder", headers={"X-API-Key": "secret"})
     assert r.json() == {"content": "Updated note"}
+
+
+def test_export_csv_lists_every_bookmark_with_its_category(client):
+    client.post("/bookmarks", data={"category": "Dev", "name": "Example", "url": "https://example.com"})
+
+    r = client.get("/bookmarks/export?format=csv")
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("text/csv")
+    assert "category,name,url" in r.text
+    assert "dev,Example,https://example.com" in r.text
+
+
+def test_export_html_produces_a_netscape_bookmark_file(client):
+    client.post("/bookmarks", data={"category": "Dev", "name": "Example", "url": "https://example.com"})
+
+    r = client.get("/bookmarks/export?format=html")
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("text/html")
+    assert "NETSCAPE-Bookmark-file-1" in r.text
+    assert "<H3>dev</H3>" in r.text
+    assert '<A HREF="https://example.com">Example</A>' in r.text
+
+
+def test_import_csv_adds_new_bookmarks_and_skips_existing_urls(client):
+    client.post("/bookmarks", data={"category": "Dev", "name": "Example", "url": "https://example.com"})
+
+    csv_content = (
+        "category,name,url\n"
+        "dev,Example,https://example.com\n"
+        "News,Site,https://news.example.com\n"
+    )
+    files = {"file": ("bookmarks.csv", csv_content, "text/csv")}
+    r = client.post("/bookmarks/import", files=files)
+    assert r.status_code == 200
+    assert "Imported 1 bookmark, skipped 1 already saved." in r.text
+
+    conn = db.open_connection(main.settings.database_path)
+    urls = {row["url"] for row in db.list_bookmarks(conn, "juan")}
+    conn.close()
+    assert urls == {"https://example.com", "https://news.example.com"}
+
+
+def test_import_html_parses_netscape_bookmark_file_and_uses_folders_as_categories(client):
+    html_content = """<!DOCTYPE NETSCAPE-Bookmark-file-1>
+    <DL><p>
+        <DT><H3>Dev</H3>
+        <DL><p>
+            <DT><A HREF="https://example.com">Example</A>
+        </DL><p>
+    </DL><p>
+    """
+    files = {"file": ("bookmarks.html", html_content, "text/html")}
+    r = client.post("/bookmarks/import", files=files)
+    assert r.status_code == 200
+    assert "Imported 1 bookmark." in r.text
+
+    conn = db.open_connection(main.settings.database_path)
+    rows = db.list_bookmarks(conn, "juan")
+    conn.close()
+    assert len(rows) == 1
+    assert rows[0]["category"] == "dev"
+    assert rows[0]["url"] == "https://example.com"

@@ -422,6 +422,16 @@
       <input placeholder="https://..." name="url" type="url" required />
       <button type="submit">Add bookmark</button>
     </form>
+    <div class="bookmark-import-export">
+      <div class="bookmark-export">
+        <a class="secondary-btn" href="/bookmarks/export?format=csv">Export CSV</a>
+        <a class="secondary-btn" href="/bookmarks/export?format=html">Export HTML</a>
+      </div>
+      <form class="bookmark-import" method="post" action="/bookmarks/import" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".csv,.html,.htm" required />
+        <button type="submit">Import</button>
+      </form>
+    </div>
   </details>
 
   <div class="bookmark-groups">

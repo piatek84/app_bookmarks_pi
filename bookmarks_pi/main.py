@@ -1,6 +1,9 @@
 """FastAPI app: passwordless login via Telegram + bookmark CRUD, one process,
 one SQLite file. No JS -- forms post back to the server and pages re-render.
 """
+import csv
+import html
+import io
 import re
 import secrets
 import shutil
@@ -8,11 +11,12 @@ import sqlite3
 import urllib.parse
 import uuid
 from datetime import date, timedelta
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Iterator, Optional
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from PIL import Image, ImageOps
@@ -502,6 +506,166 @@ def delete_bookmark(request: Request, bookmark_id: int, open_more: Optional[str]
         fragment=f"category-{slugify(row['category'])}",
         open_more=row["category"] if open_more else None,
     )
+
+
+def _normalize_url_for_dedup(url: str) -> str:
+    return url.strip().rstrip("/").lower()
+
+
+class _NetscapeBookmarkParser(HTMLParser):
+    """Parses the "Netscape Bookmark File Format" that Chrome (and every
+    other major browser) produces when you export bookmarks. Folders are
+    <H3> headings followed by a <DL> block of <DT><A> entries; nested
+    folders just nest another <H3>/<DL> pair, so a small stack tracks which
+    folder name (used as our category) currently applies."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.bookmarks: list[tuple[str, str, str]] = []
+        self._category_stack = ["Bookmarks"]
+        self._in_h3 = False
+        self._in_link = False
+        self._current_href = ""
+        self._current_text: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, Optional[str]]]) -> None:
+        if tag == "h3":
+            self._in_h3 = True
+            self._current_text = []
+        elif tag == "a":
+            self._in_link = True
+            self._current_href = dict(attrs).get("href", "") or ""
+            self._current_text = []
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "h3":
+            title = "".join(self._current_text).strip()
+            self._category_stack.append(title or "Bookmarks")
+            self._in_h3 = False
+            self._current_text = []
+        elif tag == "a":
+            name = "".join(self._current_text).strip()
+            if self._current_href:
+                self.bookmarks.append((self._category_stack[-1], name or self._current_href, self._current_href))
+            self._in_link = False
+            self._current_href = ""
+            self._current_text = []
+        elif tag == "dl" and len(self._category_stack) > 1:
+            self._category_stack.pop()
+
+    def handle_data(self, data: str) -> None:
+        if self._in_h3 or self._in_link:
+            self._current_text.append(data)
+
+
+def _parse_bookmarks_html(content: str) -> list[tuple[str, str, str]]:
+    parser = _NetscapeBookmarkParser()
+    parser.feed(content)
+    return parser.bookmarks
+
+
+def _parse_bookmarks_csv(content: str) -> list[tuple[str, str, str]]:
+    reader = csv.DictReader(io.StringIO(content))
+    if not reader.fieldnames:
+        return []
+    fields = {(name or "").strip().lower(): name for name in reader.fieldnames}
+    category_key = fields.get("category") or fields.get("folder")
+    name_key = fields.get("name") or fields.get("title")
+    url_key = fields.get("url") or fields.get("link")
+    if not url_key:
+        return []
+    bookmarks = []
+    for row in reader:
+        url = (row.get(url_key) or "").strip()
+        if not url:
+            continue
+        name = (row.get(name_key) or "").strip() if name_key else ""
+        category = (row.get(category_key) or "").strip() if category_key else ""
+        bookmarks.append((category or "Bookmarks", name or url, url))
+    return bookmarks
+
+
+def _render_bookmarks_csv_export(grouped: dict[str, list[sqlite3.Row]]) -> str:
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(["category", "name", "url"])
+    for category, items in grouped.items():
+        for bookmark in items:
+            writer.writerow([category, bookmark["name"], bookmark["url"]])
+    return buffer.getvalue()
+
+
+def _render_bookmarks_html_export(grouped: dict[str, list[sqlite3.Row]]) -> str:
+    # Netscape Bookmark File Format -- the same one Chrome writes, so the
+    # export can be re-imported into Chrome (or back into this app).
+    lines = [
+        "<!DOCTYPE NETSCAPE-Bookmark-file-1>",
+        '<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">',
+        "<TITLE>Bookmarks</TITLE>",
+        "<H1>Bookmarks</H1>",
+        "<DL><p>",
+    ]
+    for category, items in grouped.items():
+        lines.append(f"    <DT><H3>{html.escape(category)}</H3>")
+        lines.append("    <DL><p>")
+        for bookmark in items:
+            href = html.escape(bookmark["url"], quote=True)
+            name = html.escape(bookmark["name"])
+            lines.append(f'        <DT><A HREF="{href}">{name}</A>')
+        lines.append("    </DL><p>")
+    lines.append("</DL><p>")
+    return "\n".join(lines) + "\n"
+
+
+@app.get("/bookmarks/export")
+def export_bookmarks(request: Request, format: str = "csv", conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    grouped = db.list_bookmarks_grouped_by_category(conn, username)
+    if format == "html":
+        body = _render_bookmarks_html_export(grouped)
+        media_type = "text/html"
+        filename = "bookmarks.html"
+    else:
+        body = _render_bookmarks_csv_export(grouped)
+        media_type = "text/csv"
+        filename = "bookmarks.csv"
+    return Response(
+        content=body,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.post("/bookmarks/import")
+def import_bookmarks(request: Request, file: UploadFile = File(...), conn=Depends(get_db)):
+    username = _current_username(request)
+    if not username:
+        return RedirectResponse("/", status_code=303)
+    raw = file.file.read()
+    text = raw.decode("utf-8", errors="ignore")
+    filename = (file.filename or "").lower()
+    looks_like_html = filename.endswith((".html", ".htm")) or "<dl" in text[:2000].lower()
+    parsed = _parse_bookmarks_html(text) if looks_like_html else _parse_bookmarks_csv(text)
+
+    existing_urls = {_normalize_url_for_dedup(row["url"]) for row in db.list_bookmarks(conn, username)}
+    imported = 0
+    skipped = 0
+    for category, name, url in parsed:
+        key = _normalize_url_for_dedup(url)
+        if not key or key in existing_urls:
+            skipped += 1
+            continue
+        db.create_bookmark(conn, username, db.normalize_category(category), name, url)
+        existing_urls.add(key)
+        imported += 1
+
+    summary = f"Imported {imported} bookmark{'s' if imported != 1 else ''}"
+    if skipped:
+        summary += f", skipped {skipped} already saved"
+    summary += "."
+    return _redirect_to_bookmarks(open_bookmarks=1, fragment="bookmarks-settings", error=summary)
 
 
 @app.post("/bookmarks/restore")
