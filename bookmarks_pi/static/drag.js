@@ -578,6 +578,24 @@
     submitAjax(form.action, fields);
   });
 
+  var COLUMN_COUNT_KEY = "bookmarks-column-count";
+  var DEFAULT_COLUMN_COUNT = 4;
+
+  function getColumnCount() {
+    try {
+      var stored = parseInt(localStorage.getItem(COLUMN_COUNT_KEY), 10);
+      return stored >= 1 && stored <= 6 ? stored : DEFAULT_COLUMN_COUNT;
+    } catch (e) {
+      return DEFAULT_COLUMN_COUNT;
+    }
+  }
+
+  // Set on <html> rather than .bookmark-groups itself, since that element
+  // (unlike <html>) gets replaced wholesale on every AJAX action.
+  function applyColumnCount() {
+    document.documentElement.style.setProperty("--bookmark-columns", getColumnCount());
+  }
+
   var EDIT_MODE_KEY = "bookmarks-edit-mode";
 
   function isEditModeOn() {
@@ -623,8 +641,11 @@
   document.addEventListener("DOMContentLoaded", function () {
     initGroups();
     initDocumentDrag();
+    applyColumnCount();
     var editToggle = document.getElementById("bookmark-edit-mode-toggle");
     if (editToggle) editToggle.checked = isEditModeOn();
+    var columnsSelect = document.getElementById("bookmark-columns-select");
+    if (columnsSelect) columnsSelect.value = String(getColumnCount());
     setupFreeDrag(".sticky-note[data-id]", "/notes/", function (note) {
       return !!note.querySelector(".sticky-note-edit-form.editing");
     });
@@ -633,13 +654,24 @@
 
   document.addEventListener("change", function (event) {
     var toggle = event.target.closest("#bookmark-edit-mode-toggle");
-    if (!toggle) return;
-    try {
-      localStorage.setItem(EDIT_MODE_KEY, toggle.checked ? "1" : "0");
-    } catch (e) {
-      // ignore -- worst case the toggle doesn't persist across reloads
+    if (toggle) {
+      try {
+        localStorage.setItem(EDIT_MODE_KEY, toggle.checked ? "1" : "0");
+      } catch (e) {
+        // ignore -- worst case the toggle doesn't persist across reloads
+      }
+      applyEditMode();
+      return;
     }
-    applyEditMode();
+    var columnsSelect = event.target.closest("#bookmark-columns-select");
+    if (columnsSelect) {
+      try {
+        localStorage.setItem(COLUMN_COUNT_KEY, columnsSelect.value);
+      } catch (e) {
+        // ignore -- worst case the column count doesn't persist across reloads
+      }
+      applyColumnCount();
+    }
   });
 
   // A polaroid photo occasionally shows as a broken image on load, especially

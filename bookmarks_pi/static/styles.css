@@ -165,6 +165,20 @@ button:hover {
   padding: 0;
 }
 
+.column-count-control {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+
+.column-count-control select {
+  padding: 0.3rem 0.5rem;
+}
+
 .bookmark-groups .edit-btn,
 .bookmark-groups .delete-btn {
   display: none;
@@ -276,9 +290,18 @@ button:hover {
 
 .bookmark-groups {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(var(--bookmark-columns, 4), minmax(240px, 1fr));
   gap: 1rem;
   margin-top: 1rem;
+}
+
+/* The chosen column count only applies above this width -- a phone screen
+   can't fit even 2 columns of 240px each without overflowing, so it always
+   falls back to a single column regardless of the saved preference. */
+@media (max-width: 700px) {
+  .bookmark-groups {
+    grid-template-columns: 1fr;
+  }
 }
 
 .bookmark-group-header {
